@@ -1,0 +1,8 @@
+{
+  "baseEnv": ".env.example",
+  "rules": {
+    "PORT": { "type": "number" },
+    "NODE_ENV": { "type": "enum", "values": ["development", "production"] },
+    "DEBUG": { "type": "boolean", "mustBeFalseIn": "production" }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "name": "env-drift-check",
+  "version": "0.1.0",
+  "description": "Smart environment drift checker",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "envwise": "dist/cli.js",
+    "env-drift-check": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "envwise.config.json"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "start": "node dist/cli.js",
+    "dev": "ts-node src/cli.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shashi089/env-drift-check.git"
+  },
+  "keywords": [
+    "env",
+    "dotenv",
+    "validation",
+    "checker",
+    "drift",
+    "config",
+    "type-safe",
+    "environment-variables"
+  ],
+  "author": "Shashidhar Naik",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/shashi089/env-drift-check/issues"
+  },
+  "homepage": "https://github.com/shashi089/env-drift-check#readme",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "commander": "^11.0.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  }
+}
