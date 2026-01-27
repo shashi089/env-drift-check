@@ -9,7 +9,7 @@
 
 ## 🚀 Why use this?
 
-| Feature | Other Tools (dotenv-safe, check-env) | **env-drift-check** 🚀 |
+| Feature | Other Tools | **env-drift-check** 🚀 |
 | :--- | :--- | :--- |
 | **Missing Keys** | ❌ Crash & Exit | 🛠 **Interactive Setup Wizard** |
 | **Validation** | Basic Existence Check | ✅ **Rich Types** (Email, URL, Regex) |
