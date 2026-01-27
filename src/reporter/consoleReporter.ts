@@ -20,10 +20,7 @@ export function report(result: DriftResult) {
     console.log("\n Value Mismatches:");
 
     result.mismatches.forEach(m => {
-      console.log(
-        ` - ${m.key}: expected="${m.expected}" actual="${m.actual}"`
-      );
-      console.log(`   -Run --fix to sync ${m.key}`);
+      console.log(` - ${m.key.padEnd(15)} Expected: ${m.expected.padEnd(12)} Actual: ${m.actual}`);
     });
   }
 
