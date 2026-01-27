@@ -35,7 +35,8 @@ export function checkDrift(
   }
 
   // Rule-based validation
-  for (const [key, rule] of Object.entries(config.rules)) {
+  const rules = config.rules || {};
+  for (const [key, rule] of Object.entries(rules)) {
     if (target[key]) {
       const err = validateValue(
         key,
@@ -43,7 +44,7 @@ export function checkDrift(
         rule,
         target["NODE_ENV"]
       );
-      if (err) result.errors.push(err);
+      if (err) result.errors.push({ key, message: err });
     }
   }
 

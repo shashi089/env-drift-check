@@ -1,125 +1,114 @@
-# Env-Drift-Check
+# env-drift-check 🛡️
 
-**Env-Drift-Check** (formerly EnvWise) is a smart environment drift checker designed to keep your `.env` files in sync with your reference templates (like `.env.example`). It ensures that your local environment is always valid, type-safe, and ready for production.
+[![npm version](https://img.shields.io/npm/v/env-drift-check.svg)](https://www.npmjs.com/package/env-drift-check)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Why Env-Drift-Check?
+> **Stop copy-pasting `.env` files.** Onboard developers in seconds with interactive prompts and smart validation.
 
-Managing environment variables is often the most fragile part of the development lifecycle. As projects grow, `.env` files become a source of silent failures, inconsistent local setups, and production risks. **Env-Drift-Check** acts as a guardian for your environment integrity.
+**env-drift-check** is a powerful CLI tool that ensures your environment variables are always in sync with your code. Unlike other tools that just fail when keys are missing, we help you **fix them interactively**.
 
-###  Impact on Development
-- **Eliminate "It Works on My Machine"**: Ensure total parity across all developer environments.
-- **Reduce Debugging Time**: Catch configuration errors (wrong types, missing keys) at the source rather than deep in your application logs.
-- **Confidence in Deployments**: Prevent shipping invalid configurations to production.
+## 🚀 Why use this?
 
-###  Key Use Cases
-- **Seamless Onboarding**: New developers run one command to sync their local `.env` with the project's current requirements.
-- **CI/CD Guardrails**: Use **Strict Mode** in pipelines to fail builds if the environment isn't production-ready.
-- **Production Safety**: Enforce rules like disabling `DEBUG` mode in production environments automatically.
+| Feature | Other Tools (dotenv-safe, check-env) | **env-drift-check** 🚀 |
+| :--- | :--- | :--- |
+| **Missing Keys** | ❌ Crash & Exit | 🛠 **Interactive Setup Wizard** |
+| **Validation** | Basic Existence Check | ✅ **Rich Types** (Email, URL, Regex) |
+| **Onboarding** | Manual (Read docs → Copy → Paste) | **Automated** (Run command → Fill prompts) |
 
-## Quick Start
+## ✨ Features
+
+- **Interactive Mode**: Automatically prompts users to fill in missing variables.
+- **Smart Validation**: enforce types like `email`, `url`, `number`, `boolean`, and `regex`.
+- **Drift Detection**: Compares your `.env` against `.env.example`.
+- **Zero Config**: Works out of the box, or add `envwise.config.json` for superpowers.
+
+## 📦 Installation
 
 ```bash
-# Install as a dev dependency
-npm install --save-dev env-drift-check
-
-# Run the checker
+npm install -g env-drift-check
+# OR
 npx env-drift-check
 ```
 
-## Features
+## 🛠 Usage
 
--   ** Structural Diffing**: Instantly identifies missing keys in your `.env` or extra keys that aren't in your template.
--   ** Value Sync**: Compares values between files to ensure shared configurations are consistent.
--   ** Type Validation**: Enforces types for your variables (`number`, `boolean`, `enum`).
--   ** Environment Rules**: Define custom rules based on your `NODE_ENV` (e.g., `DEBUG` must be `false` in production).
--   ** Auto-Fix**: Run with `--fix` to automatically synchronize missing keys and mismatched values.
--   ** Strict Mode**: Perfect for CI/CD pipelines to fail builds if environment drift is detected.
+### 1. Basic Check
+Check if your `.env` is missing any keys defined in `.env.example`:
 
-## Installation
-
-### Local Installation (Recommended)
-Add it to your project to ensure all teammates can use it:
 ```bash
-npm install --save-dev env-drift-check
+npx env-drift-check
 ```
 
-### Global Installation
+### 2. Interactive Setup (Recommended)
+Automatically prompt the user to fill in missing keys:
+
 ```bash
-npm install -g env-drift-check
+npx env-drift-check --interactive
+# OR
+npx env-drift-check -i
 ```
 
-## Configuration
+### 3. CI/CD Mode (Strict)
+Fail the build if drift is detected (great for pipelines):
 
-Custom rules are defined in `envwise.config.json` at the root of your project:
+```bash
+npx env-drift-check --strict
+```
+
+## ⚙️ Configuration
+
+Create a `envwise.config.json` to define validation rules.
 
 ```json
 {
   "baseEnv": ".env.example",
   "rules": {
-    "PORT": { "type": "number" },
-    "NODE_ENV": { "type": "enum", "values": ["development", "production", "test"] },
-    "DEBUG": { "type": "boolean", "mustBeFalseIn": "production" }
+    "PORT": {
+      "type": "number",
+      "min": 3000,
+      "max": 9000
+    },
+    "DATABASE_URL": {
+      "type": "url",
+      "description": "Connection string for MongoDB"
+    },
+    "ADMIN_EMAIL": {
+      "type": "email",
+      "required": true
+    },
+    "FEATURE_FLAG": {
+      "type": "boolean",
+      "mustBeFalseIn": "production"
+    },
+    "API_KEY": {
+      "type": "regex",
+      "regex": "^[A-Z0-9]{32}$",
+      "description": "32-character alphanumeric key"
+    }
   }
 }
 ```
 
-### Rule Options
-| Rule Type | Description | Options |
+### Validation Types
+
+| Type | Options | Description |
 | :--- | :--- | :--- |
-| `number` | Ensures the value is a valid number. | N/A |
-| `enum` | Restricts value to a specific set. | `values: string[]` |
-| `boolean` | Checks for "true"/"false" strings. | `mustBeFalseIn: string` (e.g., "production") |
+| `string` | `min`, `max` | String length validation |
+| `number` | `min`, `max` | Numeric range validation |
+| `boolean` | `mustBeFalseIn` | True/False check |
+| `enum` | `values` (array) | Must be one of the allowlist |
+| `email` | - | Valid email format |
+| `url` | - | Valid URL format |
+| `regex` | `regex` (string) | Custom pattern matching |
 
-## Usage
+## 🤝 Contributing
 
-### Check for drift (Default: .env)
-```bash
-npx env-drift-check
-```
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-### Check a specific environment file
-```bash
-npx env-drift-check .env.staging
-```
+## 📄 License
 
-### Check ALL environment files in the project
-Automatically detects all `.env*` files and validates them against the reference.
-```bash
-npx env-drift-check --all
-```
-
-### Apply automatic fixes
-Syncs missing keys and mismatched values to the target file(s).
-```bash
-npx env-drift-check --fix
-# or
-npx env-drift-check .env.production --fix
-```
-
-### CI/CD Strict Mode
-Exits with code `1` if any errors, missing keys, or mismatches are found.
-```bash
-npx env-drift-check --strict
-```
-
-## Development
-
-If you're contributing to the project:
-
-```bash
-# Clone the repository
-git clone https://github.com/shashi089/env-drift-check.git
-cd env-drift-check
-
-# Install dependencies
-npm install
-
-# Build
-npm run build
-
-# Run in dev mode
-npm run dev
-```
-
-## License
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

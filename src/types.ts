@@ -1,11 +1,17 @@
-export type Rule =
-  | { type: "number" }
-  | { type: "boolean"; mustBeFalseIn?: string }
-  | { type: "enum"; values: string[] };
+export interface Rule {
+  type: "string" | "number" | "boolean" | "enum" | "email" | "url" | "regex";
+  values?: string[]; // for enum
+  regex?: string; // for custom regex
+  min?: number; // min length (string) or value (number)
+  max?: number; // max length (string) or value (number)
+  description?: string; // for interactive prompt
+  mustBeFalseIn?: string; // for boolean logic (legacy support)
+  required?: boolean; // defaults to true
+}
 
 export interface Config {
-  baseEnv: string;
-  rules: Record<string, Rule>;
+  baseEnv?: string;
+  rules?: Record<string, Rule>;
 }
 
 export interface ValueMismatch {
@@ -17,7 +23,7 @@ export interface ValueMismatch {
 export interface DriftResult {
   missing: string[];
   extra: string[];
-  errors: string[];
+  errors: { key: string; message: string }[]; // Changed from string[] to object for better reporting
   warnings: string[];
   mismatches: ValueMismatch[];
 }

@@ -5,12 +5,12 @@ import path from "path";
 import { parseEnv } from "./engine/envParser";
 import { checkDrift } from "./engine/driftChecker";
 import { report } from "./reporter/consoleReporter";
-import { applyFixes } from "./engine/fixer";
+import { interactiveSetup } from "./engine/interactive";
 import { loadConfig } from "./config/loadConfig";
 
 const args = process.argv.slice(2);
 const strict = args.includes("--strict");
-const fix = args.includes("--fix");
+const interactive = args.includes("--interactive") || args.includes("-i");
 const checkAll = args.includes("--all");
 const positionalArgs = args.filter(a => !a.startsWith("-"));
 
@@ -24,7 +24,7 @@ if (!fs.existsSync(basePath)) {
 
 const baseEnv = parseEnv(basePath);
 
-function runForFile(targetFile: string): boolean {
+async function runForFile(targetFile: string): Promise<boolean> {
   const targetPath = path.resolve(targetFile);
   if (!fs.existsSync(targetPath)) {
     console.error(`File missing: ${targetFile}`);
@@ -36,15 +36,21 @@ function runForFile(targetFile: string): boolean {
   const targetEnv = parseEnv(targetPath);
   let result = checkDrift(baseEnv, targetEnv, config);
 
-  if (fix) {
-    const updatedEnv = applyFixes(baseEnv, targetEnv, result);
-    fs.writeFileSync(
-      targetPath,
-      Object.entries(updatedEnv)
-        .map(([k, v]) => `${k}=${v}`)
-        .join("\n")
-    );
-    console.log(` Applied fixes to ${path.basename(targetPath)}`);
+  if (result.missing.length > 0 && interactive) {
+    const newValues = await interactiveSetup(result.missing, baseEnv, config);
+
+    // Merge new values into targetEnv
+    const updatedEnv = { ...targetEnv, ...newValues };
+
+    // Write back to file
+    const newContent = Object.entries(updatedEnv)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("\n");
+
+    fs.writeFileSync(targetPath, newContent);
+    console.log(`\n ✅ Updated ${path.basename(targetPath)} with new values.`);
+
+    // Re-check drift
     result = checkDrift(baseEnv, updatedEnv, config);
   }
 
@@ -54,23 +60,30 @@ function runForFile(targetFile: string): boolean {
   return !hasIssues;
 }
 
-let allFiles: string[] = [];
+async function main() {
+  let allFiles: string[] = [];
 
-if (checkAll) {
-  allFiles = fs.readdirSync(process.cwd())
-    .filter(f => f.startsWith(".env") && f !== path.basename(basePath));
-} else {
-  allFiles = [positionalArgs[0] || ".env"];
+  if (checkAll) {
+    allFiles = fs.readdirSync(process.cwd())
+      .filter(f => f.startsWith(".env") && f !== path.basename(basePath));
+  } else {
+    allFiles = [positionalArgs[0] || ".env"];
+  }
+
+  let overallSuccess = true;
+
+  for (const file of allFiles) {
+    const success = await runForFile(file);
+    if (!success) overallSuccess = false;
+  }
+
+  if (strict && !overallSuccess) {
+    console.error("\n Strict mode failed for one or more files");
+    process.exit(1);
+  }
 }
 
-let overallSuccess = true;
-
-for (const file of allFiles) {
-  const success = runForFile(file);
-  if (!success) overallSuccess = false;
-}
-
-if (strict && !overallSuccess) {
-  console.error("\n Strict mode failed for one or more files");
+main().catch(err => {
+  console.error(err);
   process.exit(1);
-}
+});

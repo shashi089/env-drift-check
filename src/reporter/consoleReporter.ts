@@ -13,19 +13,19 @@ export function report(result: DriftResult) {
 
   if (result.errors.length) {
     console.log("\n Errors:");
-    result.errors.forEach(e => console.log(" -", e));
+    result.errors.forEach(e => console.log(" -", `${e.key}: ${e.message}`));
   }
 
-if (result.mismatches.length) {
-  console.log("\n Value Mismatches:");
+  if (result.mismatches.length) {
+    console.log("\n Value Mismatches:");
 
-  result.mismatches.forEach(m => {
-    console.log(
-      ` - ${m.key}: expected="${m.expected}" actual="${m.actual}"`
-    );
-    console.log(`   -Run --fix to sync ${m.key}`);
-  });
-}
+    result.mismatches.forEach(m => {
+      console.log(
+        ` - ${m.key}: expected="${m.expected}" actual="${m.actual}"`
+      );
+      console.log(`   -Run --fix to sync ${m.key}`);
+    });
+  }
 
   if (
     !result.missing.length &&
