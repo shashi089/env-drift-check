@@ -1,4 +1,4 @@
-# env-drift-check 🛡️
+# env-drift-check
 
 [![npm version](https://img.shields.io/npm/v/env-drift-check.svg)](https://www.npmjs.com/package/env-drift-check)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -7,22 +7,22 @@
 
 **env-drift-check** is a powerful CLI tool that ensures your environment variables are always in sync with your code. Unlike other tools that just fail when keys are missing, we help you **fix them interactively**.
 
-## 🚀 Why use this?
+##  Why use this?
 
-| Feature | Other Tools | **env-drift-check** 🚀 |
+| Feature | Other Tools | **env-drift-check** |
 | :--- | :--- | :--- |
-| **Missing Keys** | ❌ Crash & Exit | 🛠 **Interactive Setup Wizard** |
-| **Validation** | Basic Existence Check | ✅ **Rich Types** (Email, URL, Regex) |
+| **Missing Keys** |  Crash & Exit | 🛠 **Interactive Setup Wizard** |
+| **Validation** | Basic Existence Check | **Rich Types** (Email, URL, Regex) |
 | **Onboarding** | Manual (Read docs → Copy → Paste) | **Automated** (Run command → Fill prompts) |
 
-## ✨ Features
+##  Features
 
 - **Interactive Mode**: Automatically prompts users to fill in missing variables.
 - **Smart Validation**: enforce types like `email`, `url`, `number`, `boolean`, and `regex`.
 - **Drift Detection**: Compares your `.env` against `.env.example`.
 - **Zero Config**: Works out of the box, or add `envwise.config.json` for superpowers.
 
-## 📦 Installation
+## Installation
 
 ```bash
 npm install -g env-drift-check
@@ -55,7 +55,7 @@ Fail the build if drift is detected (great for pipelines):
 npx env-drift-check --strict
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 Create a `envwise.config.json` to define validation rules.
 
@@ -101,7 +101,7 @@ Create a `envwise.config.json` to define validation rules.
 | `url` | - | Valid URL format |
 | `regex` | `regex` (string) | Custom pattern matching |
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
@@ -109,6 +109,6 @@ Create a `envwise.config.json` to define validation rules.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
