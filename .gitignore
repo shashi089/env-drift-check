@@ -20,6 +20,7 @@ dist/
 # System
 .DS_Store
 Thumbs.db
+.npmrc
 
 # IDEs
 .vscode/

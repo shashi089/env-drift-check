@@ -25,6 +25,21 @@
   "engines": {
     "node": ">=16.0.0"
   },
+  "main": "dist/cli.js",
+  "bin": {
+    "env-drift-check": "dist/cli.js"
+  },
+  "types": "dist/cli.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
   "dependencies": {
     "commander": "^11.0.0",
     "dotenv": "^16.4.0",
