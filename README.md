@@ -11,7 +11,7 @@
 
 ##  Why use this?
 
-| Feature | Other Tools (dotenv-safe, etc.) | **env-drift-check** |
+| Feature | Other Tools | **env-drift-check** |
 | :--- | :--- | :--- |
 | **Missing Keys** | Crash & Exit  |  **Interactive Setup Wizard**  |
 | **Validation** | Basic Existence Check | **Rich Types** (Email, URL, Regex, Number)  |
@@ -36,7 +36,7 @@ npm install -g env-drift-check
 npm install --save-dev env-drift-check
 ```
 
-## 🛠 Usage
+## Usage
 
 ### 1. Basic Check
 Check if your `.env` is missing any keys defined in `.env.example`. This is great for a quick status check.
