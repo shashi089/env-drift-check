@@ -7,7 +7,7 @@
 
 **env-drift-check** is the ultimate CLI tool for managing environment variables in Node.js projects. It ensures your local `.env` file is always in sync with `.env.example`, preventing runtime errors caused by missing keys. Perfect for teams and CI/CD pipelines.
 
-![env-drift-check demo](./public/env-drift-check.png)
+![env-drift-check demo](https://github.com/shashi089/env-drift-check/raw/main/assets/env-drift-check.png)
 
 ##  Why use this?
 
@@ -54,11 +54,11 @@ npx env-drift-check --interactive
 npx env-drift-check -i
 ```
 
-![Interactive update](./public/env-drift-check-i-update.png)
+![Interactive update](https://github.com/shashi089/env-drift-check/raw/main/assets/env-drift-check-i-update.png)
 
 Once completed, your `.env` file is automatically updated!
 
-![Interactive success](./public/env-drift-check-i-final.png)
+![Interactive success](https://github.com/shashi089/env-drift-check/raw/main/assets/env-drift-check-i-final.png)
 
 ### 3. CI/CD Mode (Strict)
 Ensure no broken code hits production. Use strict mode in your build pipeline to fail if environment variables are missing.
