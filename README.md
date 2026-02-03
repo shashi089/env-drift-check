@@ -1,46 +1,52 @@
-# env-drift-check
+# env-drift-check: Automatic .env Sync & Validation
 
 [![npm version](https://img.shields.io/npm/v/env-drift-check.svg)](https://www.npmjs.com/package/env-drift-check)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Stop copy-pasting `.env` files.** Onboard developers in seconds with interactive prompts and smart validation.
+> **Stop copy-pasting `.env` files.** Onboard developers in seconds with interactive prompts, smart schema validation, and drift detection.
 
-**env-drift-check** is a powerful CLI tool that ensures your environment variables are always in sync with your code. Unlike other tools that just fail when keys are missing, we help you **fix them interactively**.
+**env-drift-check** is the ultimate CLI tool for managing environment variables in Node.js projects. It ensures your local `.env` file is always in sync with `.env.example`, preventing runtime errors caused by missing keys. Perfect for teams and CI/CD pipelines.
+
+![env-drift-check demo](./public/env-drift-check.png)
 
 ##  Why use this?
 
-| Feature | Other Tools | **env-drift-check** |
+| Feature | Other Tools (dotenv-safe, etc.) | **env-drift-check** |
 | :--- | :--- | :--- |
-| **Missing Keys** |  Crash & Exit | 🛠 **Interactive Setup Wizard** |
-| **Validation** | Basic Existence Check | **Rich Types** (Email, URL, Regex) |
-| **Onboarding** | Manual (Read docs → Copy → Paste) | **Automated** (Run command → Fill prompts) |
+| **Missing Keys** | Crash & Exit  |  **Interactive Setup Wizard**  |
+| **Validation** | Basic Existence Check | **Rich Types** (Email, URL, Regex, Number)  |
+| **Onboarding** | Manual (Read docs → Copy → Paste) | **Automated** (Run command → Fill prompts)  |
+| **Drift Detection** | Static | **Real-time** comparison with `.env.example` |
 
 ##  Features
 
-- **Interactive Mode**: Automatically prompts users to fill in missing variables.
-- **Smart Validation**: enforce types like `email`, `url`, `number`, `boolean`, and `regex`.
-- **Drift Detection**: Compares your `.env` against `.env.example`.
-- **Zero Config**: Works out of the box, or add `envwise.config.json` for superpowers.
+- **Interactive Mode**: Automatically detects missing keys and prompts you to fill them in via CLI.
+- **Smart Schema Validation**: Enforce types like `email`, `url`, `number`, `boolean`, `enum`, and custom `regex`.
+- **Drift Detection**: Instantly compare your local environment against the team's `.env.example`.
+- **CI/CD Ready**: Use strict mode to fail builds if environment variables are missing or invalid.
+- **Zero Config**: Works out of the box, or add `envwise.config.json` for advanced validation rules.
 
 ## Installation
+
+Install globally or as a dev dependency:
 
 ```bash
 npm install -g env-drift-check
 # OR
-npx env-drift-check
+npm install --save-dev env-drift-check
 ```
 
 ## 🛠 Usage
 
 ### 1. Basic Check
-Check if your `.env` is missing any keys defined in `.env.example`:
+Check if your `.env` is missing any keys defined in `.env.example`. This is great for a quick status check.
 
 ```bash
 npx env-drift-check
 ```
 
 ### 2. Interactive Setup (Recommended)
-Automatically prompt the user to fill in missing keys:
+The **interactive mode** is the star feature. If missing keys are found, it launches a wizard to help you fill them in without leaving your terminal.
 
 ```bash
 npx env-drift-check --interactive
@@ -48,8 +54,14 @@ npx env-drift-check --interactive
 npx env-drift-check -i
 ```
 
+![Interactive update](./public/env-drift-check-i-update.png)
+
+Once completed, your `.env` file is automatically updated!
+
+![Interactive success](./public/env-drift-check-i-final.png)
+
 ### 3. CI/CD Mode (Strict)
-Fail the build if drift is detected (great for pipelines):
+Ensure no broken code hits production. Use strict mode in your build pipeline to fail if environment variables are missing.
 
 ```bash
 npx env-drift-check --strict
@@ -57,7 +69,7 @@ npx env-drift-check --strict
 
 ## Configuration
 
-Create a `envwise.config.json` to define validation rules.
+Create a `envwise.config.json` file in your root directory to define validation rules and defaults. This acts as a schema for your environment variables.
 
 ```json
 {
@@ -66,24 +78,25 @@ Create a `envwise.config.json` to define validation rules.
     "PORT": {
       "type": "number",
       "min": 3000,
-      "max": 9000
+      "max": 9000,
+      "description": "Port the server should listen on"
     },
     "DATABASE_URL": {
       "type": "url",
-      "description": "Connection string for MongoDB"
+      "description": "Connection string for MongoDB/PostgreSQL"
     },
     "ADMIN_EMAIL": {
       "type": "email",
       "required": true
     },
-    "FEATURE_FLAG": {
-      "type": "boolean",
-      "mustBeFalseIn": "production"
+    "ENVIRONMENT": {
+      "type": "enum",
+      "values": ["development", "production", "test"]
     },
     "API_KEY": {
       "type": "regex",
       "regex": "^[A-Z0-9]{32}$",
-      "description": "32-character alphanumeric key"
+      "description": "32-character alphanumeric API key"
     }
   }
 }
@@ -93,21 +106,23 @@ Create a `envwise.config.json` to define validation rules.
 
 | Type | Options | Description |
 | :--- | :--- | :--- |
-| `string` | `min`, `max` | String length validation |
-| `number` | `min`, `max` | Numeric range validation |
-| `boolean` | `mustBeFalseIn` | True/False check |
-| `enum` | `values` (array) | Must be one of the allowlist |
-| `email` | - | Valid email format |
-| `url` | - | Valid URL format |
-| `regex` | `regex` (string) | Custom pattern matching |
+| `string` | `min`, `max` | Validate string length. |
+| `number` | `min`, `max` | Validate numeric ranges. |
+| `boolean` | `mustBeFalseIn` | Ensure flags (like debug mode) are off in prod. |
+| `enum` | `values` (array) | Restrict to a set of allowed values. |
+| `email` | - | Validate standard email formats. |
+| `url` | - | Validate URL structure. |
+| `regex` | `regex` (string) | Custom pattern matching for keys, secrets, etc. |
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/amazing-feature`).
+3. Commit your changes (`git commit -m 'Add some amazing feature'`).
+4. Push to the branch (`git push origin feature/amazing-feature`).
+5. Open a Pull Request.
 
 ##  License
 
