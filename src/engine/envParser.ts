@@ -1,5 +1,13 @@
 import fs from "fs";
 
+/**
+ * Parses a .env file from the given file system path.
+ * It handles comments, empty lines, and quoted values.
+ * 
+ * @param path - The absolute or relative path to the .env file
+ * @returns A record containing key-value pairs of the environment variables
+ * @throws {Error} If the file does not exist
+ */
 export function parseEnv(path: string): Record<string, string> {
   if (!fs.existsSync(path)) {
     throw new Error(`Env file not found: ${path}`);

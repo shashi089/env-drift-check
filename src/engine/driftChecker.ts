@@ -1,6 +1,15 @@
 import { DriftResult, Config } from "../types";
 import { validateValue } from "./validator";
 
+/**
+ * Compares a base environment (template) against a target environment (actual)
+ * and returns the differences including missing keys, extra keys, and value mismatches.
+ * 
+ * @param base - The record representing the template environment (e.g., .env.example)
+ * @param target - The record representing the actual environment (e.g., .env)
+ * @param config - Configuration object containing validation rules
+ * @returns An object containing the results of the drift check
+ */
 export function checkDrift(
   base: Record<string, string>,
   target: Record<string, string>,

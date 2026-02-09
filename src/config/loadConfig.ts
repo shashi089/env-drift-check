@@ -8,6 +8,12 @@ const DEFAULT_CONFIG: Config = {
   rules: {}
 };
 
+/**
+ * Loads the project configuration from 'envwise.config.json' if it exists.
+ * Falls back to default configuration if no file is found.
+ * 
+ * @returns The consolidated configuration object
+ */
 export function loadConfig(): Config {
   const configPath = path.resolve("envwise.config.json");
 

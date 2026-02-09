@@ -18,15 +18,21 @@
 | **Onboarding** | Manual (Read docs → Copy → Paste) | **Automated** (Run command → Fill prompts)  |
 | **Drift Detection** | Static | **Real-time** comparison with `.env.example` |
 
-##  Features
+###  Features
 
 - **Interactive Mode**: Automatically detects missing keys and prompts you to fill them in via CLI.
 - **Smart Schema Validation**: Enforce types like `email`, `url`, `number`, `boolean`, `enum`, and custom `regex`.
 - **Drift Detection**: Instantly compare your local environment against the team's `.env.example`.
-- **CI/CD Ready**: Use strict mode to fail builds if environment variables are missing or invalid.
 - **Zero Config**: Works out of the box, or add `envwise.config.json` for advanced validation rules.
 
+## 📖 Documentation
+
+- [CLI Usage](./docs/CLI-Usage.md) - Command line flags and examples.
+- [Configuration](./docs/Configuration.md) - Advanced validation rules and `envwise.config.json`.
+- [Programmatic API](./docs/API-Reference.md) - Using the package in your code.
+
 ## Installation
+
 
 Install globally or as a dev dependency:
 

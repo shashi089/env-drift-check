@@ -1,6 +1,6 @@
 {
   "name": "env-drift-check",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Interactive environment variable checker and setup wizard. Sync .env files with validation (Email, URL, Regex) and prompts.",
   "keywords": [
     "env",

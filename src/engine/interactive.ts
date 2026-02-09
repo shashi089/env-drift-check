@@ -2,6 +2,15 @@ import prompts from "prompts";
 import { Rule, Config } from "../types";
 import { validateValue } from "./validator";
 
+/**
+ * Launches an interactive CLI wizard to help users fill in missing environment variables.
+ * Uses the 'prompts' package to collect user input with validation.
+ * 
+ * @param missingKeys - An array of environment variable keys that are missing
+ * @param baseEnv - The template environment mapping
+ * @param config - The tool configuration containing validation rules
+ * @returns A promise that resolves to a record of the newly filled key-value pairs
+ */
 export async function interactiveSetup(
     missingKeys: string[],
     baseEnv: Record<string, string>,
