@@ -1,6 +1,6 @@
 {
   "name": "env-drift-check",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Interactive .env synchronizer and validator. Detect environment drift, sync missing variables, and enforce schema validation for seamless developer onboarding.",
   "keywords": [
     "env",

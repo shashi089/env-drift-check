@@ -62,11 +62,18 @@ npx env-drift-check --base .env.production
 
 ### 3. Interactive Sync (The "Magic" Feature)
 If missing variables are found, launch the interactive wizard to fill them in without leaving your IDE.
+
 ```bash
 npx env-drift-check --interactive
 # OR
 npx env-drift-check -i
 ```
+
+![Interactive update](https://github.com/shashi089/env-drift-check/raw/main/assets/env-drift-check-i-update.png)
+
+Once completed, your `.env` file is automatically updated!
+
+![Interactive success](https://github.com/shashi089/env-drift-check/raw/main/assets/env-drift-check-i-final.png)
 
 ### 4. CI/CD & Strict Mode
 Fail your build or test suite if environment variables are out of sync.

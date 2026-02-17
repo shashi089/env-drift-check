@@ -14,7 +14,7 @@ const program = new Command();
 program
   .name("env-drift-check")
   .description("Interactive .env synchronizer and validator")
-  .version("0.1.5");
+  .version("0.1.7");
 
 program
   .command("check", { isDefault: true })
