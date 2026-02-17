@@ -1,7 +1,7 @@
 {
   "name": "env-drift-check",
-  "version": "0.1.5",
-  "description": "Interactive environment variable checker and setup wizard. Sync .env files with validation (Email, URL, Regex) and prompts.",
+  "version": "0.1.6",
+  "description": "Interactive .env synchronizer and validator. Detect environment drift, sync missing variables, and enforce schema validation for seamless developer onboarding.",
   "keywords": [
     "env",
     "dotenv",
@@ -16,7 +16,12 @@
     "setup",
     "onboarding",
     "drift",
-    "checker"
+    "checker",
+    "cli-tool",
+    "dx",
+    "env-sync",
+    "security",
+    "workflow"
   ],
   "author": "Shashidhar Naik",
   "license": "MIT",

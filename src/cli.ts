@@ -2,88 +2,128 @@
 
 import fs from "fs";
 import path from "path";
+import { Command } from "commander";
 import { parseEnv } from "./engine/envParser";
 import { checkDrift } from "./engine/driftChecker";
 import { report } from "./reporter/consoleReporter";
 import { interactiveSetup } from "./engine/interactive";
 import { loadConfig } from "./config/loadConfig";
 
-const args = process.argv.slice(2);
-const strict = args.includes("--strict");
-const interactive = args.includes("--interactive") || args.includes("-i");
-const checkAll = args.includes("--all");
-const positionalArgs = args.filter(a => !a.startsWith("-"));
+const program = new Command();
 
-const config = loadConfig();
-const basePath = path.resolve(config.baseEnv || ".env.example");
+program
+  .name("env-drift-check")
+  .description("Interactive .env synchronizer and validator")
+  .version("0.1.5");
 
-if (!fs.existsSync(basePath)) {
-  console.error(`Reference file missing: ${basePath}`);
-  process.exit(1);
-}
+program
+  .command("check", { isDefault: true })
+  .description("Check for environment drift (default command)")
+  .argument("[file]", "Target .env file to check", ".env")
+  .option("-b, --base <reference>", "Reference .env file to check against (e.g., .env.example)")
+  .option("-i, --interactive", "Launch interactive setup wizard for missing keys")
+  .option("-s, --strict", "Fail with non-zero exit code if issues are found")
+  .option("-a, --all", "Check all .env* files in the current directory")
+  .action(async (file, options) => {
+    const config = loadConfig();
+    const basePath = path.resolve(options.base || config.baseEnv || ".env.example");
 
-const baseEnv = parseEnv(basePath);
+    if (!fs.existsSync(basePath)) {
+      console.error(`Reference file missing: ${basePath}`);
+      process.exit(1);
+    }
 
-async function runForFile(targetFile: string): Promise<boolean> {
-  const targetPath = path.resolve(targetFile);
-  if (!fs.existsSync(targetPath)) {
-    console.error(`File missing: ${targetFile}`);
-    return false;
-  }
+    const baseEnv = parseEnv(basePath);
 
-  console.log(`\n Checking ${path.basename(targetPath)} against ${path.basename(basePath)}...`);
+    async function runForFile(targetFile: string): Promise<boolean> {
+      const targetPath = path.resolve(targetFile);
+      if (!fs.existsSync(targetPath)) {
+        console.error(`File missing: ${targetFile}`);
+        return false;
+      }
 
-  const targetEnv = parseEnv(targetPath);
-  let result = checkDrift(baseEnv, targetEnv, config);
+      console.log(`\n Checking ${path.basename(targetPath)} against ${path.basename(basePath)}...`);
 
-  if (result.missing.length > 0 && interactive) {
-    const newValues = await interactiveSetup(result.missing, baseEnv, config);
+      const targetEnv = parseEnv(targetPath);
+      let result = checkDrift(baseEnv, targetEnv, config);
 
-    // Merge new values into targetEnv
-    const updatedEnv = { ...targetEnv, ...newValues };
+      if (result.missing.length > 0 && options.interactive) {
+        const newValues = await interactiveSetup(result.missing, baseEnv, config);
 
-    // Write back to file
-    const newContent = Object.entries(updatedEnv)
-      .map(([k, v]) => `${k}=${v}`)
-      .join("\n");
+        // Merge new values into targetEnv
+        const updatedEnv = { ...targetEnv, ...newValues };
 
-    fs.writeFileSync(targetPath, newContent);
-    console.log(`\n ✅ Updated ${path.basename(targetPath)} with new values.`);
+        // Write back to file
+        const newContent = Object.entries(updatedEnv)
+          .map(([k, v]) => `${k}=${v}`)
+          .join("\n");
 
-    // Re-check drift
-    result = checkDrift(baseEnv, updatedEnv, config);
-  }
+        fs.writeFileSync(targetPath, newContent);
+        console.log(`\n ✅ Updated ${path.basename(targetPath)} with new values.`);
 
-  report(result);
+        // Re-check drift
+        result = checkDrift(baseEnv, updatedEnv, config);
+      }
 
-  const hasIssues = result.missing.length || result.mismatches.length || result.errors.length;
-  return !hasIssues;
-}
+      report(result);
 
-async function main() {
-  let allFiles: string[] = [];
+      const hasIssues = result.missing.length || result.mismatches.length || result.errors.length;
+      return !hasIssues;
+    }
 
-  if (checkAll) {
-    allFiles = fs.readdirSync(process.cwd())
-      .filter(f => f.startsWith(".env") && f !== path.basename(basePath));
-  } else {
-    allFiles = [positionalArgs[0] || ".env"];
-  }
+    let allFiles: string[] = [];
+    if (options.all) {
+      allFiles = fs.readdirSync(process.cwd())
+        .filter(f => f.startsWith(".env") && f !== path.basename(basePath));
+    } else {
+      allFiles = [file];
+    }
 
-  let overallSuccess = true;
+    let overallSuccess = true;
+    for (const f of allFiles) {
+      const success = await runForFile(f);
+      if (!success) overallSuccess = false;
+    }
 
-  for (const file of allFiles) {
-    const success = await runForFile(file);
-    if (!success) overallSuccess = false;
-  }
+    if (options.strict && !overallSuccess) {
+      console.error("\n Strict mode failed for one or more files");
+      process.exit(1);
+    }
+  });
 
-  if (strict && !overallSuccess) {
-    console.error("\n Strict mode failed for one or more files");
-    process.exit(1);
-  }
-}
+program
+  .command("init")
+  .description("Initialize a new project with default configuration")
+  .action(() => {
+    const configPath = path.join(process.cwd(), "envwise.config.json");
+    const exampleEnvPath = path.join(process.cwd(), ".env.example");
 
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+    if (fs.existsSync(configPath)) {
+      console.log("ℹ️ envwise.config.json already exists.");
+    } else {
+      const defaultConfig = {
+        baseEnv: ".env.example",
+        rules: {
+          PORT: {
+            type: "number",
+            min: 1024,
+            max: 65535,
+            description: "Application port"
+          }
+        }
+      };
+      fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
+      console.log("✅ Created envwise.config.json");
+    }
+
+    if (fs.existsSync(exampleEnvPath)) {
+      console.log("ℹ️ .env.example already exists.");
+    } else {
+      fs.writeFileSync(exampleEnvPath, "PORT=3000\n");
+      console.log("✅ Created .env.example");
+    }
+
+    console.log("\nSetup complete! Run 'npx env-drift-check -i' to sync your .env file.");
+  });
+
+program.parse(process.argv);

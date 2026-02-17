@@ -1,81 +1,84 @@
-# env-drift-check: Automatic .env Sync & Validation
+# env-drift-check: Interactive .env Sync & Validation for Teams
 
 [![npm version](https://img.shields.io/npm/v/env-drift-check.svg)](https://www.npmjs.com/package/env-drift-check)
+[![npm downloads](https://img.shields.io/npm/dm/env-drift-check.svg)](https://www.npmjs.com/package/env-drift-check)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Stop copy-pasting `.env` files.** Onboard developers in seconds with interactive prompts, smart schema validation, and drift detection.
+> **Eliminate "It works on my machine" issues.** Synchronize `.env` files across your team with interactive prompts, smart schema validation, and real-time drift detection.
 
-**env-drift-check** is the ultimate CLI tool for managing environment variables in Node.js projects. It ensures your local `.env` file is always in sync with `.env.example`, preventing runtime errors caused by missing keys. Perfect for teams and CI/CD pipelines.
+**env-drift-check** is a powerful CLI utility designed to manage environment variables in Node.js applications. It ensures your local `.env` remains in perfect sync with `.env.example`, preventing runtime crashes and streamlining developer onboarding.
 
 ![env-drift-check demo](https://github.com/shashi089/env-drift-check/raw/main/assets/env-drift-check.png)
 
-##  Why use this?
+## 🚀 Why Use env-drift-check?
 
-| Feature | Other Tools | **env-drift-check** |
+Manually managing environment variables is error-prone. **env-drift-check** automates the process:
+
+| Pain Point | Standard Approach | **env-drift-check** |
 | :--- | :--- | :--- |
-| **Missing Keys** | Crash & Exit  |  **Interactive Setup Wizard**  |
-| **Validation** | Basic Existence Check | **Rich Types** (Email, URL, Regex, Number)  |
-| **Onboarding** | Manual (Read docs → Copy → Paste) | **Automated** (Run command → Fill prompts)  |
-| **Drift Detection** | Static | **Real-time** comparison with `.env.example` |
+| **Missing Keys** | Application crashes at runtime | **Interactive Setup Wizard** fills them |
+| **Type Safety** | String-only values, no validation | **Rich Validation** (Email, URL, Regex) |
+| **Team Onboarding** | "Copy this file from Slack/Docs" | `npx env-drift-check init` & sync |
+| **Configuration Drift** | Desync between dev/stage/prod | **Real-time Detection** against template |
 
-###  Features
+### Key Features
 
-- **Interactive Mode**: Automatically detects missing keys and prompts you to fill them in via CLI.
-- **Smart Schema Validation**: Enforce types like `email`, `url`, `number`, `boolean`, `enum`, and custom `regex`.
-- **Drift Detection**: Instantly compare your local environment against the team's `.env.example`.
-- **Zero Config**: Works out of the box, or add `envwise.config.json` for advanced validation rules.
+- **Interactive Mode**: Automatically detects missing keys and prompts you to fill them in directly via the CLI.
+- **Smart Schema Validation**: Enforce strict types including `email`, `url`, `number`, `boolean`, `enum`, and custom `regex`.
+- **Zero Config Setup**: Works out of the box. Add an optional `envwise.config.json` for advanced rules.
+- **CI/CD Ready**: Use `--strict` mode in your build pipeline to prevent deployments with missing variables.
 
 ## 📖 Documentation
 
-- [CLI Usage](./docs/CLI-Usage.md) - Command line flags and examples.
-- [Configuration](./docs/Configuration.md) - Advanced validation rules and `envwise.config.json`.
-- [Programmatic API](./docs/API-Reference.md) - Using the package in your code.
+- [CLI Usage](./docs/CLI-Usage.md) - Detailed flags and command examples.
+- [Configuration](./docs/Configuration.md) - Advanced types and `envwise.config.json` schema.
+- [Programmatic API](./docs/API-Reference.md) - Integrating the validation engine into your code.
 
 ## Installation
 
-
-Install globally or as a dev dependency:
-
 ```bash
-npm install -g env-drift-check
-# OR
+# Install as a dev dependency (Recommended)
 npm install --save-dev env-drift-check
+
+# OR install globally
+npm install -g env-drift-check
 ```
 
 ## Usage
 
-### 1. Basic Check
-Check if your `.env` is missing any keys defined in `.env.example`. This is great for a quick status check.
-
+### 1. Initialize (New Setup)
+Bootstrap your project by creating a configuration and an example environment file.
 ```bash
-npx env-drift-check
+npx env-drift-check init
 ```
 
-### 2. Interactive Setup (Recommended)
-The **interactive mode** is the star feature. If missing keys are found, it launches a wizard to help you fill them in without leaving your terminal.
+### 2. Basic Check
+Compare your `.env` against the reference (default: `.env.example`).
+```bash
+npx env-drift-check
+# Specify a custom reference file
+npx env-drift-check --base .env.production
+```
 
+### 3. Interactive Sync (The "Magic" Feature)
+If missing variables are found, launch the interactive wizard to fill them in without leaving your IDE.
 ```bash
 npx env-drift-check --interactive
 # OR
 npx env-drift-check -i
 ```
 
-![Interactive update](https://github.com/shashi089/env-drift-check/raw/main/assets/env-drift-check-i-update.png)
-
-Once completed, your `.env` file is automatically updated!
-
-![Interactive success](https://github.com/shashi089/env-drift-check/raw/main/assets/env-drift-check-i-final.png)
-
-### 3. CI/CD Mode (Strict)
-Ensure no broken code hits production. Use strict mode in your build pipeline to fail if environment variables are missing.
-
+### 4. CI/CD & Strict Mode
+Fail your build or test suite if environment variables are out of sync.
 ```bash
 npx env-drift-check --strict
 ```
 
-## Configuration
+---
 
-Create a `envwise.config.json` file in your root directory to define validation rules and defaults. This acts as a schema for your environment variables.
+## 🛠 Advanced Configuration
+
+Define validation rules in `envwise.config.json` to ensure data integrity across environments.
 
 ```json
 {
@@ -98,31 +101,26 @@ Create a `envwise.config.json` file in your root directory to define validation 
     "ENVIRONMENT": {
       "type": "enum",
       "values": ["development", "production", "test"]
-    },
-    "API_KEY": {
-      "type": "regex",
-      "regex": "^[A-Z0-9]{32}$",
-      "description": "32-character alphanumeric API key"
     }
   }
 }
 ```
 
-### Validation Types
+### Supported Validation Types
 
-| Type | Options | Description |
+| Type | Description | Example Rule |
 | :--- | :--- | :--- |
-| `string` | `min`, `max` | Validate string length. |
-| `number` | `min`, `max` | Validate numeric ranges. |
-| `boolean` | `mustBeFalseIn` | Ensure flags (like debug mode) are off in prod. |
-| `enum` | `values` (array) | Restrict to a set of allowed values. |
-| `email` | - | Validate standard email formats. |
-| `url` | - | Validate URL structure. |
-| `regex` | `regex` (string) | Custom pattern matching for keys, secrets, etc. |
+| `string` | Length validation | `{ "min": 5, "max": 20 }` |
+| `number` | Range validation | `{ "min": 1, "max": 100 }` |
+| `boolean` | Flag checks | `{ "mustBeFalseIn": ["production"] }` |
+| `enum` | Restricted values | `{ "values": ["v1", "v2"] }` |
+| `email` | Standard email format | `type: "email"` |
+| `url` | Valid URL/URI structure | `type: "url"` |
+| `regex` | Custom pattern matching | `{ "regex": "^sk_live_.*" }` |
 
 ## Contributing
 
-We welcome contributions! Please follow these steps:
+We welcome contributions! See the [issues](https://github.com/shashi089/env-drift-check/issues) for planned features or bug reports.
 
 1. Fork the repository.
 2. Create your feature branch (`git checkout -b feature/amazing-feature`).
@@ -130,6 +128,6 @@ We welcome contributions! Please follow these steps:
 4. Push to the branch (`git push origin feature/amazing-feature`).
 5. Open a Pull Request.
 
-##  License
+## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT © [Shashidhar Naik](https://github.com/shashi089)
