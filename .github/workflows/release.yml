@@ -1,4 +1,4 @@
-name: Auto Release
+name: Auto Release & Publish
 
 on:
   push:
@@ -7,10 +7,12 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
-  release:
+  release-and-publish:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,31 +23,35 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
- 
+          registry-url: 'https://registry.npmjs.org'
+
       - name: Get version from package.json
         id: pkg
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Detected version: $VERSION"
 
       - name: Check if tag already exists
         id: tag_check
         run: |
+          git fetch --tags
           if git rev-parse "v${{ steps.pkg.outputs.version }}" >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag v${{ steps.pkg.outputs.version }} already exists — skipping"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Tag v${{ steps.pkg.outputs.version }} not found — will release and publish"
           fi
 
       - name: Extract changelog for this version
-        id: changelog
         if: steps.tag_check.outputs.exists == 'false'
         run: |
           VERSION="${{ steps.pkg.outputs.version }}"
-          # Extract section between this version and the next heading
-          NOTES=$(awk "/^## \[?v?${VERSION}\]?/{flag=1; next} /^## /{flag=0} flag" CHANGELOG.md 2>/dev/null || echo "")
+          NOTES=$(awk "/^## \[?v?${VERSION}\]?/{flag=1; next} /^## /{flag=0} flag" CHANGELOG.md 2>/dev/null || true)
           if [ -z "$NOTES" ]; then
             NOTES="Release v${VERSION}"
           fi
-          # Write to file to preserve multiline content
           echo "$NOTES" > /tmp/release_notes.txt
 
       - name: Create GitHub Release
@@ -59,3 +65,21 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        if: steps.tag_check.outputs.exists == 'false'
+        run: npm ci
+
+      - name: Build
+        if: steps.tag_check.outputs.exists == 'false'
+        run: npm run build --if-present
+
+      - name: Verify package contents
+        if: steps.tag_check.outputs.exists == 'false'
+        run: npm pack --dry-run
+
+      - name: Publish to npm
+        if: steps.tag_check.outputs.exists == 'false'
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
