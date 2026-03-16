@@ -21,7 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
  
       - name: Get version from package.json
         id: pkg
@@ -60,21 +59,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install dependencies
-        if: steps.tag_check.outputs.exists == 'false'
-        run: npm ci
-
-      - name: Build
-        if: steps.tag_check.outputs.exists == 'false'
-        run: npm run build --if-present
-
-      - name: Verify package contents
-        if: steps.tag_check.outputs.exists == 'false'
-        run: npm pack --dry-run
-
-      - name: Publish to npm
-        if: steps.tag_check.outputs.exists == 'false'
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
