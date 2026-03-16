@@ -65,7 +65,8 @@ graph TD
 - 🔍 **Environment Drift Detection**: Compares your local `.env` against the base `.env.example` to find missing or extra keys.
 - 🛡️ **Extensive Schema Validation**: Enforce `string`, `number`, `boolean`, `enum`, `email`, `url`, and custom `regex` validations via `envwise.config.json`.
 - 🪄 **Interactive Auto-fix**: A beautiful CLI wizard that prompts you for missing variables and writes them back to your `.env` file automatically.
-- 🔄 **Multi-Environment Support**: Validate all `.env*` files in your project with the `--all` flag.
+- � **Formatting Preservation**: Inherently preserves your original inline comments, empty lines, bespoke spacing, and absolute key ordering when writing updates to your target `.env` file.
+- �🔄 **Multi-Environment Support**: Validate all `.env*` files in your project with the `--all` flag.
 - 🚦 **CI/CD Ready**: Use `--strict` mode to fail the build if variables are missing or invalid, ensuring safe deployments.
 
 ### How Does It Compare?

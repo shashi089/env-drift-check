@@ -53,11 +53,62 @@ program
         // Merge new values into targetEnv
         const updatedEnv = { ...targetEnv, ...newValues };
 
-        // Write back to file
-        const newContent = Object.entries(updatedEnv)
-          .map(([k, v]) => `${k}=${v}`)
-          .join("\n");
+        // Write back to file preserving formatting
+        const rawContent = fs.readFileSync(targetPath, "utf-8");
+        const lines = rawContent.split(/\r?\n/);
+        const eol = rawContent.includes("\r\n") ? "\r\n" : "\n";
 
+        const updatedLines: string[] = [];
+        const keysToUpdate = { ...newValues };
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith("#")) {
+            updatedLines.push(line);
+            continue;
+          }
+
+          const firstEq = line.indexOf("=");
+          if (firstEq !== -1) {
+            const key = line.slice(0, firstEq).trim();
+            if (key in keysToUpdate) {
+              const prefix = line.slice(0, firstEq + 1);
+
+              const rawValue = line.slice(firstEq + 1);
+              let suffix = "";
+              let inQuote = false;
+              let quoteChar = "";
+              for (let i = 0; i < rawValue.length; i++) {
+                const c = rawValue[i];
+                if ((c === '"' || c === "'") && !inQuote) {
+                  inQuote = true;
+                  quoteChar = c;
+                } else if (c === quoteChar && inQuote) {
+                  inQuote = false;
+                } else if (c === '#' && !inQuote) {
+                  // Keep spacing before the comment if possible
+                  const spaceMatch = rawValue.slice(0, i).match(/\s+$/);
+                  const spaces = spaceMatch ? spaceMatch[0] : " ";
+                  suffix = spaces + rawValue.slice(i);
+                  break;
+                }
+              }
+
+              updatedLines.push(`${prefix}${keysToUpdate[key]}${suffix}`);
+              delete keysToUpdate[key];
+              continue;
+            }
+          }
+          updatedLines.push(line);
+        }
+
+        if (Object.keys(keysToUpdate).length > 0) {
+          for (const [k, v] of Object.entries(keysToUpdate)) {
+            updatedLines.push(`${k}=${v}`);
+          }
+        }
+
+        const newContent = updatedLines.join(eol);
         fs.writeFileSync(targetPath, newContent);
         console.log(`\n ✅ Updated ${path.basename(targetPath)} with new values.`);
 
