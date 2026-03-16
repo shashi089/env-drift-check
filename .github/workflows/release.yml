@@ -22,7 +22,6 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-          cache:'npm'
  
       - name: Get version from package.json
         id: pkg
