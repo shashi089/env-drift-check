@@ -2,12 +2,11 @@
 
 <div align="center">
 
-**A combined environment drift detector + schema validator for multi-environment setups.**
+**Detect, validate, and fix environment variable drift --- without breaking your `.env` file.**
 
 [![npm version](https://img.shields.io/npm/v/env-drift-check.svg?style=flat-square)](https://npmjs.org/package/env-drift-check)
 [![npm downloads](https://img.shields.io/npm/dm/env-drift-check.svg?style=flat-square)](https://npm-stat.com/charts.html?package=env-drift-check)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
-[![CI Status](https://img.shields.io/badge/build-passing-brightgreen?style=flat-square)](#)
 
 *Say goodbye to "It works on my machine" and hello to bulletproof environment variables.*
 
@@ -18,6 +17,32 @@
 <div align="center">
   <img src="https://github.com/shashi089/env-drift-check/raw/main/assets/env-drift-check.png" alt="env-drift-check demo" />
 </div>
+
+---
+
+## ⚡ See It In Action
+
+```bash
+npx env-drift-check
+
+✔ Loaded: .env
+✔ Base: .env.example
+
+✖ Missing keys:
+  - DATABASE_URL
+  - STRIPE_SECRET_KEY
+
+⚠ Unused keys:
+  - OLD_API_KEY
+
+❌ Validation failed: PORT must be a number
+```
+
+👉 **Fix instantly with interactive mode:**
+
+```bash
+npx env-drift-check -i
+```
 
 ---
 
@@ -62,24 +87,38 @@ graph TD
 
 ## 🚀 Features
 
-- 🔍 **Environment Drift Detection**: Compares your local `.env` against the base `.env.example` to find missing or extra keys.
+- 🔍 **Environment Drift Detection**: Automatically compares your local `.env` against the base `.env.example`. Detects both **missing keys** and **extra/ghost keys**.
 - 🛡️ **Extensive Schema Validation**: Enforce `string`, `number`, `boolean`, `enum`, `email`, `url`, and custom `regex` validations via `envwise.config.json`.
-- 🪄 **Interactive Auto-fix**: A beautiful CLI wizard that prompts you for missing variables and writes them back to your `.env` file automatically.
-- � **Formatting Preservation**: Inherently preserves your original inline comments, empty lines, bespoke spacing, and absolute key ordering when writing updates to your target `.env` file.
-- �🔄 **Multi-Environment Support**: Validate all `.env*` files in your project with the `--all` flag.
-- 🚦 **CI/CD Ready**: Use `--strict` mode to fail the build if variables are missing or invalid, ensuring safe deployments.
+- 🪄 **Interactive Auto-fix Wizard**: A beautiful CLI experience that prompts you for missing variables.
+- 🔐 **Security Conscious**: Automatically masks inputs for keys containing `SECRET` or `PASSWORD` during interactive setup.
+- 📑 **High-Fidelity Formatting**: Inherently preserves your original inline comments, empty lines, bespoke spacing, and absolute key ordering when patching your `.env` file.
+- 🔄 **Multi-Environment Support**: Validate all `.env*` files in your project simultaneously with the `--all` flag.
+- 🚦 **CI/CD Ready**: Native `--strict` mode to fail builds on validation errors, ensuring zero-drift deployments.
+
+### ✨ Interactive Fix (Best Feature)
+
+```bash
+$ npx env-drift-check -i
+
+Missing: DATABASE_URL
+Enter value: postgres://localhost:5432/db
+
+✔ Added to .env
+✔ All variables synced
+```
 
 ### How Does It Compare?
 
 | Feature | `dotenv-safe` | `envalid` | **`env-drift-check`** |
 | :--- | :---: | :---: | :---: |
 | **Missing Keys Detection** | ✅ | ✅ | ✅ |
-| **CLI Interactive Mode** | ❌ | ❌ | ✅ |
-| **Schema Validation (Config)** | ❌ | ✅ (Code) | ✅ (JSON) |
+| **CLI Interactive Fix** | ❌ | ❌ | ✅ |
+| **Schema Validation** | ❌ | ✅ (Code) | ✅ (JSON) |
 | **Cross-Env File Check** | ❌ | ❌ | ✅ |
 | **No Code Integration Needed**| ❌ | ❌ | ✅ |
+| **Preserves Formatting** | ❌ | ❌ | ✅ |
 
-*(env-drift-check works purely as a CLI tooling step, meaning you don't need to change your application's actual code to validate environment variables!)*
+👉 **env-drift-check works purely as a standalone CLI tool --- no code changes required!**
 
 ---
 
@@ -184,51 +223,36 @@ To unlock the full power of the schema validator, define rules in an `envwise.co
 | `url` | - | Validates standard URI formats. |
 | `regex` | `regex` | Custom regular expression validation. |
 
-*(All variables are `required: true` by default unless explicitly specified as `required: false` in their rule).*
-
 ---
 
 ## 💻 CLI Usage Examples
 
-### Drift Detection Example
-Check the default `.env` file against the default `.env.example`:
-
+Check defaults:
 ```bash
 npx env-drift-check
 ```
-*Output Detail:*
-```text
-🚨 1 Mismatched Keys
-PORT: Expected 3000, got 8080
 
-❌ 2 Validation Errors
-DATABASE_URL: DATABASE_URL must be a valid URL
-NODE_ENV: NODE_ENV must be one of: development, production
+Launch Interactive fix:
+```bash
+npx env-drift-check -i
 ```
 
-### Multi-Environment Verification
-Check all `.env.development`, `.env.test`, `.env.production` files in parallel:
+Strict mode (fails with exit code 1):
+```bash
+npx env-drift-check --strict
+```
 
+Multi-Environment check:
 ```bash
 npx env-drift-check --all
 ```
 
-### CI/CD Pipeline Integration (Strict Mode)
-Run the check in your GitHub Actions, GitLab CI, or pre-commit hook. Using `--strict` ensures the process exits with `code 1` on any error.
+---
 
-```yaml
-# .github/workflows/ci.yml
-name: CI
-on: [push, pull_request]
+## 📤 Exit Codes
 
-jobs:
-  validate-env:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      # Assuming you have a .env.test you want to validate
-      - run: npx env-drift-check .env.test --strict
-```
+- `0` → No issues found.
+- `1` → Schema validation failed or missing keys detected (in `--strict` mode).
 
 ---
 
@@ -252,9 +276,12 @@ jobs:
 - [x] Boolean conditional checks (`mustBeFalseIn`)
 - [x] Interactive CLI prompts
 - [x] Multi-file parsing (`--all`)
+- [x] High-fidelity formatting preservation
 - [ ] **JSON Output Mode**: Provide `--format json` for reporting to integrate with other tooling pipelines.
 - [ ] **Secret Scanning**: Add basic entropy checks to prevent weak local passwords from entering production variables.
 - [ ] **Variable Deprecation**: Support marking keys as deprecated to gracefully remove them across teams.
+- [ ] **Auto-generate `.env.example`**: Create a base example from an existing `.env`.
+- [ ] **Codebase Scanning**: Detect variables used in code (`process.env.X`) that are missing from config.
 
 ---
 
@@ -273,5 +300,7 @@ Contributions are always welcome!
 ## 📄 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
+
+---
 
 > Built with ❤️ for better Developer Experience by [Shashidhar Naik](https://github.com/shashi089)
