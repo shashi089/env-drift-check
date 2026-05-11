@@ -8,14 +8,14 @@
 [![npm downloads](https://img.shields.io/npm/dm/env-drift-check.svg?style=flat-square)](https://npm-stat.com/charts.html?package=env-drift-check)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
-*Say goodbye to "It works on my machine" and hello to bulletproof environment variables.*
+*Eliminate "It works on my machine" errors with automated drift detection and interactive environment synchronization.*
 
-[Installation](#installation) • [Features](#features) • [Quick Start](#quick-start) • [Configuration](#configuration) • [Usage](#usage) • [Roadmap](#roadmap)
+[Installation](#installation) • [Features](#features) • [Quick Start](#quick-start) • [Configuration](#configuration) • [Library Usage](#programmatic-usage) • [Roadmap](#roadmap)
 
 </div>
 
 <div align="center">
-  <img src="https://github.com/shashi089/env-drift-check/raw/main/assets/env-drift-check.png" alt="env-drift-check demo" />
+  <img src="https://github.com/shashi089/env-drift-check/raw/main/assets/env-drift-check.png" alt="env-drift-check: Interactive .env synchronizer and validator" width="800" />
 </div>
 
 ---
@@ -147,6 +147,10 @@ Bootstrap your repository with a default configuration and `.env.example`:
 ```bash
 npx env-drift-check init
 ```
+
+> [!TIP]
+> Check out our [Demo Project](https://github.com/shashi089/env-drift-check/tree/main/examples/demo-app) to see how to integrate this into a real application workflow.
+
 *Output:*
 ```text
 ✅ Created envwise.config.json
@@ -222,6 +226,38 @@ To unlock the full power of the schema validator, define rules in an `envwise.co
 | `email` | - | Validates against a standard email regex. |
 | `url` | - | Validates standard URI formats. |
 | `regex` | `regex` | Custom regular expression validation. |
+
+---
+
+## 📦 Programmatic Usage
+
+`env-drift-check` can also be used as a library in your Node.js applications to enforce environment health at startup.
+
+```typescript
+import { checkDrift, loadConfig, parseEnv, report } from 'env-drift-check';
+import path from 'path';
+
+const config = loadConfig();
+const baseEnv = parseEnv(path.resolve('.env.example'));
+const targetEnv = parseEnv(path.resolve('.env'));
+
+const result = checkDrift(baseEnv, targetEnv, config);
+
+if (result.missing.length || result.errors.length) {
+  console.error("Environment check failed!");
+  report(result);
+  process.exit(1);
+}
+```
+
+---
+
+## 📚 Examples
+
+Explore our sample projects to see `env-drift-check` in action:
+
+- [**Basic Usage**](https://github.com/shashi089/env-drift-check/tree/main/examples/basic-usage): A minimal example showing file synchronization.
+- [**Real-World Demo App**](https://github.com/shashi089/env-drift-check/tree/main/examples/demo-app): A complete Express-style app with programmatic "fail-fast" bootstrap logic and CI/CD integration.
 
 ---
 

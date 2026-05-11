@@ -7,6 +7,7 @@ import { parseEnv } from "./engine/envParser";
 import { checkDrift } from "./engine/driftChecker";
 import { report } from "./reporter/consoleReporter";
 import { interactiveSetup } from "./engine/interactive";
+import { updateEnvFile } from "./engine/envWriter";
 import { loadConfig } from "./config/loadConfig";
 
 const program = new Command();
@@ -14,7 +15,7 @@ const program = new Command();
 program
   .name("env-drift-check")
   .description("Interactive .env synchronizer and validator")
-  .version("0.1.7");
+  .version("0.1.9");
 
 program
   .command("check", { isDefault: true })
@@ -50,69 +51,13 @@ program
       if (result.missing.length > 0 && options.interactive) {
         const newValues = await interactiveSetup(result.missing, baseEnv, config);
 
-        // Merge new values into targetEnv
-        const updatedEnv = { ...targetEnv, ...newValues };
-
-        // Write back to file preserving formatting
-        const rawContent = fs.readFileSync(targetPath, "utf-8");
-        const lines = rawContent.split(/\r?\n/);
-        const eol = rawContent.includes("\r\n") ? "\r\n" : "\n";
-
-        const updatedLines: string[] = [];
-        const keysToUpdate = { ...newValues };
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith("#")) {
-            updatedLines.push(line);
-            continue;
-          }
-
-          const firstEq = line.indexOf("=");
-          if (firstEq !== -1) {
-            const key = line.slice(0, firstEq).trim();
-            if (key in keysToUpdate) {
-              const prefix = line.slice(0, firstEq + 1);
-
-              const rawValue = line.slice(firstEq + 1);
-              let suffix = "";
-              let inQuote = false;
-              let quoteChar = "";
-              for (let i = 0; i < rawValue.length; i++) {
-                const c = rawValue[i];
-                if ((c === '"' || c === "'") && !inQuote) {
-                  inQuote = true;
-                  quoteChar = c;
-                } else if (c === quoteChar && inQuote) {
-                  inQuote = false;
-                } else if (c === '#' && !inQuote) {
-                  // Keep spacing before the comment if possible
-                  const spaceMatch = rawValue.slice(0, i).match(/\s+$/);
-                  const spaces = spaceMatch ? spaceMatch[0] : " ";
-                  suffix = spaces + rawValue.slice(i);
-                  break;
-                }
-              }
-
-              updatedLines.push(`${prefix}${keysToUpdate[key]}${suffix}`);
-              delete keysToUpdate[key];
-              continue;
-            }
-          }
-          updatedLines.push(line);
-        }
-
-        if (Object.keys(keysToUpdate).length > 0) {
-          for (const [k, v] of Object.entries(keysToUpdate)) {
-            updatedLines.push(`${k}=${v}`);
-          }
-        }
-
-        const newContent = updatedLines.join(eol);
-        fs.writeFileSync(targetPath, newContent);
+        // Update file preserving formatting
+        updateEnvFile(targetPath, newValues);
+        
         console.log(`\n ✅ Updated ${path.basename(targetPath)} with new values.`);
 
-        // Re-check drift
+        // Re-check drift after update
+        const updatedEnv = parseEnv(targetPath);
         result = checkDrift(baseEnv, updatedEnv, config);
       }
 

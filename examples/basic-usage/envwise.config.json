@@ -1,0 +1,23 @@
+{
+  "baseEnv": ".env.example",
+  "rules": {
+    "DB_PORT": {
+      "type": "number",
+      "min": 1024,
+      "max": 65535
+    },
+    "NODE_ENV": {
+      "type": "enum",
+      "values": ["development", "staging", "production", "test"]
+    },
+    "DEBUG": {
+      "type": "boolean",
+      "mustBeFalseIn": "production"
+    },
+    "API_KEY": {
+      "type": "string",
+      "min": 10,
+      "description": "Must be at least 10 characters"
+    }
+  }
+}

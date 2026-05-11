@@ -34,7 +34,8 @@ export function checkDrift(
 
   // Value mismatch detection
   for (const key of Object.keys(base)) {
-    if (key in target && base[key] !== target[key]) {
+    // Only report mismatch if the base value is non-empty (i.e., a specific required value)
+    if (key in target && base[key] !== "" && base[key] !== target[key]) {
       result.mismatches.push({
         key,
         expected: base[key],

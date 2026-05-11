@@ -1,0 +1,18 @@
+{
+  "name": "demo-app",
+  "version": "1.0.0",
+  "description": "A demo app showing env-drift-check integration",
+  "main": "src/index.js",
+  "scripts": {
+    "setup": "env-drift-check -i",
+    "validate": "env-drift-check --strict",
+    "start": "node src/index.js",
+    "dev": "npm run validate && npm start"
+  },
+  "devDependencies": {
+    "env-drift-check": "latest"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  }
+}

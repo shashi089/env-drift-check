@@ -1,0 +1,23 @@
+{
+  "baseEnv": ".env.example",
+  "rules": {
+    "PORT": {
+      "type": "number",
+      "min": 1024,
+      "max": 65535,
+      "description": "Port to run the express server on"
+    },
+    "DATABASE_URL": {
+      "type": "url",
+      "required": true
+    },
+    "ENABLE_LOGGING": {
+      "type": "boolean"
+    },
+    "STRIPE_SECRET_KEY": {
+      "type": "string",
+      "min": 20,
+      "description": "Your Stripe API secret key"
+    }
+  }
+}
