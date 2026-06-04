@@ -16,8 +16,24 @@ export function validateValue(
   rule: Rule,
   env: string
 ): string | null {
-  if (!value && rule.required !== false) {
-    return `${key} is required`;
+  if (!value) {
+    if (rule.required !== false) {
+      return `${key} is required`;
+    }
+    return null;
+  }
+
+  // Secret / entropy validation
+  const isSecretKey = key.toLowerCase().includes("password") || key.toLowerCase().includes("secret");
+  const runSecretCheck = rule.checkSecretStrength || (rule.checkSecretStrength !== false && isSecretKey);
+  if (runSecretCheck) {
+    const WEAK_SECRETS = ["password", "123456", "admin", "secret", "root", "temp", "test", "12345678", "123", "qwerty"];
+    if (WEAK_SECRETS.includes(value.toLowerCase())) {
+      return `${key} uses a weak or default password/secret`;
+    }
+    if (env === "production" && value.length < 8) {
+      return `${key} must be at least 8 characters long in production`;
+    }
   }
 
   // Number validation

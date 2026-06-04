@@ -9,6 +9,8 @@ import { report } from "./reporter/consoleReporter";
 import { interactiveSetup } from "./engine/interactive";
 import { updateEnvFile } from "./engine/envWriter";
 import { loadConfig } from "./config/loadConfig";
+import { generateExampleFile } from "./engine/envGenerator";
+import { scanCodebase } from "./engine/codeScanner";
 
 const program = new Command();
 
@@ -25,45 +27,83 @@ program
   .option("-i, --interactive", "Launch interactive setup wizard for missing keys")
   .option("-s, --strict", "Fail with non-zero exit code if issues are found")
   .option("-a, --all", "Check all .env* files in the current directory")
+  .option("--system-env", "Fallback to process.env during verification")
+  .option("-f, --format <format>", "Output format: text or json", "text")
   .action(async (file, options) => {
     const config = loadConfig();
+    if (options.systemEnv) {
+      config.includeSystemEnv = true;
+    }
     const basePath = path.resolve(options.base || config.baseEnv || ".env.example");
 
     if (!fs.existsSync(basePath)) {
-      console.error(`Reference file missing: ${basePath}`);
+      if (options.format !== "json") {
+        console.error(`Reference file missing: ${basePath}`);
+      }
       process.exit(1);
     }
 
     const baseEnv = parseEnv(basePath);
+    const runResults: Record<string, any> = {};
 
     async function runForFile(targetFile: string): Promise<boolean> {
       const targetPath = path.resolve(targetFile);
-      if (!fs.existsSync(targetPath)) {
-        console.error(`File missing: ${targetFile}`);
-        return false;
+      let targetEnv: Record<string, string> = {};
+
+      const fileExists = fs.existsSync(targetPath);
+      if (!fileExists) {
+        if (options.systemEnv) {
+          targetEnv = {};
+        } else {
+          if (options.format !== "json") {
+            console.error(`File missing: ${targetFile}`);
+          }
+          return false;
+        }
+      } else {
+        targetEnv = parseEnv(targetPath);
       }
 
-      console.log(`\n Checking ${path.basename(targetPath)} against ${path.basename(basePath)}...`);
+      if (options.format !== "json") {
+        if (fileExists) {
+          console.log(`\n Checking ${path.basename(targetPath)} against ${path.basename(basePath)}...`);
+        } else {
+          console.log(`\n Checking process.env against ${path.basename(basePath)}...`);
+        }
+      }
 
-      const targetEnv = parseEnv(targetPath);
       let result = checkDrift(baseEnv, targetEnv, config);
 
       if (result.missing.length > 0 && options.interactive) {
-        const newValues = await interactiveSetup(result.missing, baseEnv, config);
+        if (!fileExists) {
+          fs.writeFileSync(targetPath, "");
+        }
+        const currentEnv = targetEnv["NODE_ENV"] || process.env["NODE_ENV"] || "development";
+        const newValues = await interactiveSetup(result.missing, baseEnv, config, currentEnv);
 
         // Update file preserving formatting
         updateEnvFile(targetPath, newValues);
         
-        console.log(`\n ✅ Updated ${path.basename(targetPath)} with new values.`);
+        if (options.format !== "json") {
+          console.log(`\n ✅ Updated ${path.basename(targetPath)} with new values.`);
+        }
 
         // Re-check drift after update
         const updatedEnv = parseEnv(targetPath);
         result = checkDrift(baseEnv, updatedEnv, config);
       }
 
-      report(result);
+      if (options.format !== "json") {
+        report(result);
+      }
 
       const hasIssues = result.missing.length || result.mismatches.length || result.errors.length;
+      
+      runResults[targetFile] = {
+        success: !hasIssues,
+        result
+      };
+
       return !hasIssues;
     }
 
@@ -81,9 +121,69 @@ program
       if (!success) overallSuccess = false;
     }
 
+    if (options.format === "json") {
+      console.log(JSON.stringify(runResults, null, 2));
+    }
+
     if (options.strict && !overallSuccess) {
-      console.error("\n Strict mode failed for one or more files");
+      if (options.format !== "json") {
+        console.error("\n Strict mode failed for one or more files");
+      }
       process.exit(1);
+    }
+  });
+
+program
+  .command("gen-example")
+  .description("Generate or update a .env.example file based on the keys in your target .env")
+  .argument("[file]", "Source .env file", ".env")
+  .option("-o, --output <output>", "Output file name", ".env.example")
+  .action(async (file, options) => {
+    const sourcePath = path.resolve(file);
+    const destPath = path.resolve(options.output);
+    try {
+      await generateExampleFile(sourcePath, destPath);
+    } catch (err: any) {
+      console.error(`Error generating template: ${err.message}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("scan")
+  .description("Scan workspace source files to identify used process.env variables and check against .env.example")
+  .option("-b, --base <reference>", "Reference .env file (e.g. .env.example)", ".env.example")
+  .action((options) => {
+    const basePath = path.resolve(options.base);
+    let baseKeys: string[] = [];
+    if (fs.existsSync(basePath)) {
+      baseKeys = Object.keys(parseEnv(basePath));
+    } else {
+      console.warn(`⚠️ Reference file not found: ${basePath}`);
+    }
+
+    console.log("🔍 Scanning codebase for process.env references...");
+    const scanResult = scanCodebase(process.cwd());
+    console.log(`Scanned ${scanResult.filesScanned} source file(s).`);
+
+    const missingInExample = scanResult.usedKeys.filter(k => !baseKeys.includes(k));
+    const unusedInCode = baseKeys.filter(k => !scanResult.usedKeys.includes(k));
+
+    if (scanResult.usedKeys.length > 0) {
+      console.log("\n🔑 Environment variables referenced in code:");
+      scanResult.usedKeys.forEach(k => console.log(` - ${k}`));
+    } else {
+      console.log("\nNo process.env references found in code.");
+    }
+
+    if (missingInExample.length > 0) {
+      console.log("\n❌ Missing in reference template (referenced in code but not in example):");
+      missingInExample.forEach(k => console.log(` - ${k}`));
+    }
+
+    if (unusedInCode.length > 0) {
+      console.log("\n⚠️ Unused in code (defined in example but not found in codebase):");
+      unusedInCode.forEach(k => console.log(` - ${k}`));
     }
   });
 

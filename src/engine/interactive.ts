@@ -14,7 +14,8 @@ import { validateValue } from "./validator";
 export async function interactiveSetup(
     missingKeys: string[],
     baseEnv: Record<string, string>,
-    config: Config
+    config: Config,
+    currentEnv: string = "development"
 ): Promise<Record<string, string>> {
     const newValues: Record<string, string> = {};
 
@@ -37,7 +38,7 @@ export async function interactiveSetup(
             initial: promptType === "confirm" ? initial === "true" : initial,
             validate: (val) => {
                 const strVal = String(val);
-                const error = validateValue(key, strVal, rule, "local"); // Assuming 'local' context for now
+                const error = validateValue(key, strVal, rule, currentEnv);
                 return error || true;
             }
         });

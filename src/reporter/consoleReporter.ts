@@ -24,6 +24,11 @@ export function report(result: DriftResult) {
     });
   }
 
+  if (result.warnings.length) {
+    console.log("\n ⚠️ Warnings:");
+    result.warnings.forEach(w => console.log(" -", w));
+  }
+
   if (
     !result.missing.length &&
     !result.extra.length &&

@@ -18,6 +18,10 @@ export interface Rule {
   mustBeFalseIn?: string;
   /** Whether the variable is mandatory. Defaults to true. */
   required?: boolean;
+  /** If true, runs security / entropy checks to ensure passwords or keys are not weak. */
+  checkSecretStrength?: boolean;
+  /** Marks the key as deprecated. If true, prints a warning. Can also be a string containing a custom deprecation message. */
+  deprecated?: boolean | string;
 }
 
 /**
@@ -28,6 +32,8 @@ export interface Config {
   baseEnv?: string;
   /** A map of environment variable keys to their validation rules. */
   rules?: Record<string, Rule>;
+  /** Whether to fall back to process.env during checks. */
+  includeSystemEnv?: boolean;
 }
 
 /**

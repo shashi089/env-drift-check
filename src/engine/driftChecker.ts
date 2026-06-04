@@ -23,9 +23,12 @@ export function checkDrift(
     mismatches: []
   };
 
+  const includeSystemEnv = !!config.includeSystemEnv;
+
   // Missing & extra keys
   for (const key of Object.keys(base)) {
-    if (!(key in target)) result.missing.push(key);
+    const exists = (key in target) || (includeSystemEnv && (key in process.env));
+    if (!exists) result.missing.push(key);
   }
 
   for (const key of Object.keys(target)) {
@@ -34,26 +37,42 @@ export function checkDrift(
 
   // Value mismatch detection
   for (const key of Object.keys(base)) {
-    if (key in target && base[key] !== target[key]) {
-      result.mismatches.push({
-        key,
-        expected: base[key],
-        actual: target[key]
-      });
+    const hasTarget = key in target;
+    const hasSystem = includeSystemEnv && (key in process.env);
+    if (hasTarget || hasSystem) {
+      const actualValue = hasTarget ? target[key] : process.env[key]!;
+      if (base[key] !== actualValue) {
+        result.mismatches.push({
+          key,
+          expected: base[key],
+          actual: actualValue
+        });
+      }
     }
   }
 
-  // Rule-based validation
+  // Rule-based validation & deprecation warning
   const rules = config.rules || {};
+  const currentEnv = target["NODE_ENV"] || process.env["NODE_ENV"] || "development";
   for (const [key, rule] of Object.entries(rules)) {
-    if (target[key]) {
+    const hasTarget = key in target;
+    const hasSystem = includeSystemEnv && (key in process.env);
+    if (hasTarget || hasSystem) {
+      const value = hasTarget ? target[key] : process.env[key]!;
       const err = validateValue(
         key,
-        target[key],
+        value,
         rule,
-        target["NODE_ENV"]
+        currentEnv
       );
       if (err) result.errors.push({ key, message: err });
+
+      if (rule.deprecated) {
+        const msg = typeof rule.deprecated === "string"
+          ? rule.deprecated
+          : `${key} is deprecated and should be removed.`;
+        result.warnings.push(msg);
+      }
     }
   }
 
