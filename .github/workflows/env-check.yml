@@ -1,0 +1,54 @@
+name: Environment Validation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - '.env.example'
+      - 'envwise.config.json'
+  pull_request:
+    paths:
+      - '.env.example'
+      - 'envwise.config.json'
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+jobs:
+  env-drift-check:
+    name: Validate Environment Configuration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ── Validate system environment against your schema ───────────────────
+      # All required env vars must be injected as GitHub Actions secrets.
+      # This step fails the build if any are missing or fail validation.
+      - name: Check environment drift (strict)
+        run: npx env-drift-check --system-env --strict --format json
+        env:
+          # Inject your real secrets here from GitHub Actions secrets.
+          # Example — replace with your actual variables:
+          NODE_ENV: production
+          PORT: ${{ secrets.PORT }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          API_SECRET_KEY: ${{ secrets.API_SECRET_KEY }}
+
+      # ── Scan codebase for undocumented process.env references ─────────────
+      # Fails if code references a variable not in .env.example.
+      - name: Scan codebase for undocumented env vars
+        run: npx env-drift-check scan
+
+      # ── Git safety audit ──────────────────────────────────────────────────
+      # Warns if any .env file has ever been committed to git history.
+      - name: Audit .env git safety
+        run: npx env-drift-check audit
+        # Continue on error so the audit result is visible without blocking
+        # the pipeline — change to 'false' if you want this to be a hard gate.
+        continue-on-error: true

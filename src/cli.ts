@@ -2,6 +2,7 @@
 
 import fs from "fs";
 import path from "path";
+import { execSync } from "node:child_process";
 import { Command } from "commander";
 import { parseEnv } from "./engine/envParser";
 import { checkDrift } from "./engine/driftChecker";
@@ -11,13 +12,54 @@ import { updateEnvFile } from "./engine/envWriter";
 import { loadConfig } from "./config/loadConfig";
 import { generateExampleFile } from "./engine/envGenerator";
 import { scanCodebase } from "./engine/codeScanner";
+import type { Config, DriftResult } from "./types";
 
 const program = new Command();
 
 program
   .name("env-drift-check")
   .description("Interactive .env synchronizer and validator")
-  .version("0.2.1");
+  .version("0.3.0");
+
+// ─── check helpers ────────────────────────────────────────────────────────────
+
+function resolveTargetEnv(
+  targetPath: string,
+  useSystemEnv: boolean,
+  isJson: boolean
+): Record<string, string> | null {
+  if (fs.existsSync(targetPath)) return parseEnv(targetPath);
+  if (useSystemEnv) return {};
+  if (!isJson) console.error(`File missing: ${path.basename(targetPath)}`);
+  return null;
+}
+
+function logCheckHeader(targetPath: string, basePath: string, fileExists: boolean, isJson: boolean) {
+  if (isJson) return;
+  const label = fileExists
+    ? path.basename(targetPath)
+    : "process.env";
+  console.log(`\n Checking ${label} against ${path.basename(basePath)}...`);
+}
+
+async function applyInteractiveFix(
+  targetPath: string,
+  fileExists: boolean,
+  missing: string[],
+  baseEnv: Record<string, string>,
+  config: Config,
+  targetEnv: Record<string, string>,
+  isJson: boolean
+): Promise<DriftResult> {
+  if (!fileExists) fs.writeFileSync(targetPath, "");
+  const currentEnv = targetEnv["NODE_ENV"] ?? process.env["NODE_ENV"] ?? "development";
+  const newValues = await interactiveSetup(missing, baseEnv, config, currentEnv);
+  updateEnvFile(targetPath, newValues);
+  if (!isJson) console.log(`\n ✅ Updated ${path.basename(targetPath)} with new values.`);
+  return checkDrift(baseEnv, parseEnv(targetPath), config);
+}
+
+// ─── check command ─────────────────────────────────────────────────────────────
 
 program
   .command("check", { isDefault: true })
@@ -31,107 +73,59 @@ program
   .option("-f, --format <format>", "Output format: text or json", "text")
   .action(async (file, options) => {
     const config = loadConfig();
-    if (options.systemEnv) {
-      config.includeSystemEnv = true;
-    }
-    const basePath = path.resolve(options.base || config.baseEnv || ".env.example");
+    if (options.systemEnv) config.includeSystemEnv = true;
+
+    const basePath = path.resolve(options.base ?? config.baseEnv ?? ".env.example");
+    const isJson = options.format === "json";
 
     if (!fs.existsSync(basePath)) {
-      if (options.format !== "json") {
-        console.error(`Reference file missing: ${basePath}`);
-      }
+      if (!isJson) console.error(`Reference file missing: ${basePath}`);
       process.exit(1);
     }
 
     const baseEnv = parseEnv(basePath);
-    const runResults: Record<string, any> = {};
+    const runResults: Record<string, { success: boolean; result: DriftResult }> = {};
 
     async function runForFile(targetFile: string): Promise<boolean> {
       const targetPath = path.resolve(targetFile);
-      let targetEnv: Record<string, string> = {};
+      const targetEnv = resolveTargetEnv(targetPath, !!options.systemEnv, isJson);
+      if (targetEnv === null) return false;
 
       const fileExists = fs.existsSync(targetPath);
-      if (!fileExists) {
-        if (options.systemEnv) {
-          targetEnv = {};
-        } else {
-          if (options.format !== "json") {
-            console.error(`File missing: ${targetFile}`);
-          }
-          return false;
-        }
-      } else {
-        targetEnv = parseEnv(targetPath);
-      }
-
-      if (options.format !== "json") {
-        if (fileExists) {
-          console.log(`\n Checking ${path.basename(targetPath)} against ${path.basename(basePath)}...`);
-        } else {
-          console.log(`\n Checking process.env against ${path.basename(basePath)}...`);
-        }
-      }
+      logCheckHeader(targetPath, basePath, fileExists, isJson);
 
       let result = checkDrift(baseEnv, targetEnv, config);
 
       if (result.missing.length > 0 && options.interactive) {
-        if (!fileExists) {
-          fs.writeFileSync(targetPath, "");
-        }
-        const currentEnv = targetEnv["NODE_ENV"] || process.env["NODE_ENV"] || "development";
-        const newValues = await interactiveSetup(result.missing, baseEnv, config, currentEnv);
-
-        // Update file preserving formatting
-        updateEnvFile(targetPath, newValues);
-        
-        if (options.format !== "json") {
-          console.log(`\n ✅ Updated ${path.basename(targetPath)} with new values.`);
-        }
-
-        // Re-check drift after update
-        const updatedEnv = parseEnv(targetPath);
-        result = checkDrift(baseEnv, updatedEnv, config);
+        result = await applyInteractiveFix(targetPath, fileExists, result.missing, baseEnv, config, targetEnv, isJson);
       }
 
-      if (options.format !== "json") {
-        report(result);
-      }
+      if (!isJson) report(result);
 
-      const hasIssues = result.missing.length || result.mismatches.length || result.errors.length;
-      
-      runResults[targetFile] = {
-        success: !hasIssues,
-        result
-      };
-
-      return !hasIssues;
+      const success = !result.missing.length && !result.mismatches.length && !result.errors.length;
+      runResults[targetFile] = { success, result };
+      return success;
     }
 
-    let allFiles: string[] = [];
-    if (options.all) {
-      allFiles = fs.readdirSync(process.cwd())
-        .filter(f => f.startsWith(".env") && f !== path.basename(basePath));
-    } else {
-      allFiles = [file];
-    }
+    const allFiles = options.all
+      ? fs.readdirSync(process.cwd()).filter(f => f.startsWith(".env") && f !== path.basename(basePath))
+      : [file];
 
     let overallSuccess = true;
     for (const f of allFiles) {
-      const success = await runForFile(f);
-      if (!success) overallSuccess = false;
+      const ok = await runForFile(f);
+      if (!ok) overallSuccess = false;
     }
 
-    if (options.format === "json") {
-      console.log(JSON.stringify(runResults, null, 2));
-    }
+    if (isJson) console.log(JSON.stringify(runResults, null, 2));
 
     if (options.strict && !overallSuccess) {
-      if (options.format !== "json") {
-        console.error("\n Strict mode failed for one or more files");
-      }
+      if (!isJson) console.error("\n Strict mode failed for one or more files");
       process.exit(1);
     }
   });
+
+// ─── gen-example ───────────────────────────────────────────────────────────────
 
 program
   .command("gen-example")
@@ -139,20 +133,21 @@ program
   .argument("[file]", "Source .env file", ".env")
   .option("-o, --output <output>", "Output file name", ".env.example")
   .action(async (file, options) => {
-    const sourcePath = path.resolve(file);
-    const destPath = path.resolve(options.output);
     try {
-      await generateExampleFile(sourcePath, destPath);
-    } catch (err: any) {
-      console.error(`Error generating template: ${err.message}`);
+      await generateExampleFile(path.resolve(file), path.resolve(options.output));
+    } catch (err: unknown) {
+      console.error(`Error generating template: ${err instanceof Error ? err.message : err}`);
       process.exit(1);
     }
   });
+
+// ─── scan ──────────────────────────────────────────────────────────────────────
 
 program
   .command("scan")
   .description("Scan workspace source files to identify used process.env variables and check against .env.example")
   .option("-b, --base <reference>", "Reference .env file (e.g. .env.example)", ".env.example")
+  .option("--fix", "Append keys missing from .env.example back into it")
   .action((options) => {
     const basePath = path.resolve(options.base);
     let baseKeys: string[] = [];
@@ -179,6 +174,12 @@ program
     if (missingInExample.length > 0) {
       console.log("\n❌ Missing in reference template (referenced in code but not in example):");
       missingInExample.forEach(k => console.log(` - ${k}`));
+
+      if (options.fix) {
+        const appended = missingInExample.map(k => `${k}=`).join("\n");
+        fs.appendFileSync(basePath, `\n# Added by env-drift-check scan --fix\n${appended}\n`);
+        console.log(`\n✅ Appended ${missingInExample.length} key(s) to ${options.base}`);
+      }
     }
 
     if (unusedInCode.length > 0) {
@@ -186,6 +187,101 @@ program
       unusedInCode.forEach(k => console.log(` - ${k}`));
     }
   });
+
+// ─── diff ──────────────────────────────────────────────────────────────────────
+
+program
+  .command("diff <fileA> <fileB>")
+  .description("Show a side-by-side diff between two .env files")
+  .action((fileA, fileB) => {
+    const pathA = path.resolve(fileA);
+    const pathB = path.resolve(fileB);
+
+    if (!fs.existsSync(pathA)) { console.error(`File not found: ${fileA}`); process.exit(1); }
+    if (!fs.existsSync(pathB)) { console.error(`File not found: ${fileB}`); process.exit(1); }
+
+    const a = parseEnv(pathA);
+    const b = parseEnv(pathB);
+    const allKeys = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort((x, y) => x.localeCompare(y));
+
+    console.log(`\n Diff: ${fileA}  →  ${fileB}\n`);
+
+    let hasChanges = false;
+    for (const key of allKeys) {
+      if (!(key in a)) {
+        console.log(`  + ${key}=${b[key]}   (only in ${fileB})`);
+        hasChanges = true;
+      } else if (!(key in b)) {
+        console.log(`  - ${key}=${a[key]}   (only in ${fileA})`);
+        hasChanges = true;
+      } else if (a[key] !== b[key]) {
+        console.log(`  ~ ${key}: "${a[key]}" → "${b[key]}"`);
+        hasChanges = true;
+      }
+    }
+
+    if (!hasChanges) console.log("  ✔ No differences found.");
+  });
+
+// ─── audit ─────────────────────────────────────────────────────────────────────
+
+function isGitTracked(file: string): boolean {
+  try { execSync(`git ls-files --error-unmatch "${file}"`, { stdio: "ignore" }); return true; } catch { return false; }
+}
+
+function isInGitHistory(file: string): boolean {
+  try { return execSync(`git log --all --full-history -- "${file}"`, { encoding: "utf-8" }).trim().length > 0; } catch { return false; }
+}
+
+function auditFile(file: string, gitignoreLines: string[]): boolean {
+  console.log(`\n ${file}`);
+  let fileHasIssues = false;
+
+  const inGitignore = gitignoreLines.some(l => l === file || l === `/${file}`);
+  console.log(`  ${inGitignore ? "✔" : "✖"} ${inGitignore ? "Listed" : "NOT listed"} in .gitignore`);
+  if (!inGitignore) fileHasIssues = true;
+
+  const tracked = isGitTracked(file);
+  const trackedMsg = tracked ? `Tracked by git — run: git rm --cached ${file}` : "Not tracked by git";
+  console.log(`  ${tracked ? "✖ DANGER" : "✔"} ${trackedMsg}`);
+  if (tracked) fileHasIssues = true;
+
+  const inHistory = isInGitHistory(file);
+  const historyMsg = inHistory ? "Found in git history — past commits may contain secrets" : "Not found in git history";
+  console.log(`  ${inHistory ? "⚠" : "✔"} ${historyMsg}`);
+  if (inHistory) fileHasIssues = true;
+
+  return fileHasIssues;
+}
+
+program
+  .command("audit")
+  .description("Check if .env files are safely excluded from git tracking and history")
+  .action(() => {
+    const filesToAudit = fs.readdirSync(process.cwd())
+      .filter(f => /^\.env(\..+)?$/.test(f) && f !== ".env.example");
+
+    if (filesToAudit.length === 0) {
+      console.log("No .env files found in current directory.");
+      return;
+    }
+
+    const gitignoreLines = fs.existsSync(".gitignore")
+      ? fs.readFileSync(".gitignore", "utf-8").split(/\r?\n/).map(l => l.trim())
+      : [];
+
+    const hasIssues = filesToAudit.some(file => auditFile(file, gitignoreLines));
+
+    console.log();
+    if (hasIssues) {
+      console.log(" ⚠️  Issues found. Review the items above.");
+      process.exit(1);
+    } else {
+      console.log(" ✔ All .env files are safely excluded from git.");
+    }
+  });
+
+// ─── init ──────────────────────────────────────────────────────────────────────
 
 program
   .command("init")
@@ -200,12 +296,7 @@ program
       const defaultConfig = {
         baseEnv: ".env.example",
         rules: {
-          PORT: {
-            type: "number",
-            min: 1024,
-            max: 65535,
-            description: "Application port"
-          }
+          PORT: { type: "number", min: 1024, max: 65535, description: "Application port" }
         }
       };
       fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));

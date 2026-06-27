@@ -1,27 +1,38 @@
 {
   "name": "env-drift-check",
-  "version": "0.2.3",
-  "description": "Interactive .env synchronizer and validator. Detect environment drift, sync missing variables, and enforce schema validation for seamless developer onboarding.",
+  "version": "0.3.0",
+  "description": "CLI tool for .env validation, schema checking, drift detection, environment diff, git audit, and codebase scanning. Zero-code-change alternative to dotenv-safe and envalid.",
   "keywords": [
     "env",
     "dotenv",
-    "check-env",
     "dotenv-safe",
-    "env-drift-check",
-    "environment-variables",
+    "envalid",
     "env-validation",
-    "config",
-    "validation",
-    "interactive",
-    "setup",
-    "onboarding",
-    "drift",
-    "checker",
+    "env-drift",
+    "environment-variables",
+    "environment-validation",
+    "missing-env-vars",
+    "env-checker",
+    "env-diff",
+    "env-audit",
+    "schema-validation",
+    "type-safe-env",
+    "cli",
     "cli-tool",
     "dx",
-    "env-sync",
+    "developer-experience",
+    "onboarding",
+    "ci-cd",
+    "deployment-safety",
+    "secret-detection",
+    "entropy",
     "security",
-    "workflow"
+    "git-safety",
+    "vite",
+    "nextjs",
+    "nodejs",
+    "typescript",
+    "12-factor"
   ],
   "author": "Shashidhar Naik",
   "license": "MIT",
@@ -45,7 +56,9 @@
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "commander": "^11.0.0",
@@ -54,6 +67,7 @@
   "devDependencies": {
     "@types/prompts": "^2.4.9",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.1.9"
   }
 }

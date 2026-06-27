@@ -20,7 +20,12 @@ export function scanCodebase(baseDir: string): CodebaseScanResult {
   const EXCLUDED_DIRS = new Set(["node_modules", "dist", "build", "coverage", ".git", ".gemini", "assets", "docs"]);
   const TARGET_EXTENSIONS = new Set([".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs"]);
 
-  const regex = /\bprocess\.env\.([A-Z_][A-Z0-9_]*)\b|\bprocess\.env\[['"`]([A-Z_][A-Z0-9_]*)['"`]\]/g;
+  // process.env.KEY and process.env['KEY']
+  const dotEnvRegex = /\bprocess\.env\.([A-Z_][A-Z0-9_]*)\b|\bprocess\.env\[['"`]([A-Z_][A-Z0-9_]*)['"`]\]/g;
+  // const { KEY1, KEY2 } = process.env
+  const destructureRegex = /\{([^}]+)\}\s*=\s*process\.env/g;
+  // import.meta.env.VITE_KEY (Vite)
+  const viteRegex = /\bimport\.meta\.env\.([A-Z_][A-Z0-9_]*)\b/g;
 
   function walk(dir: string) {
     const files = fs.readdirSync(dir);
@@ -30,7 +35,7 @@ export function scanCodebase(baseDir: string): CodebaseScanResult {
       try {
         stat = fs.statSync(fullPath);
       } catch {
-        continue; // Handle broken symlinks or permissions
+        continue;
       }
 
       if (stat.isDirectory()) {
@@ -42,15 +47,25 @@ export function scanCodebase(baseDir: string): CodebaseScanResult {
           filesScanned++;
           const content = fs.readFileSync(fullPath, "utf-8");
           let match;
-          // Reset regex index before scanning each file
-          regex.lastIndex = 0;
-          while ((match = regex.exec(content)) !== null) {
-            // match[1] corresponds to process.env.KEY
-            // match[2] corresponds to process.env['KEY']
+
+          dotEnvRegex.lastIndex = 0;
+          while ((match = dotEnvRegex.exec(content)) !== null) {
             const key = match[1] || match[2];
-            if (key) {
-              foundKeys.add(key);
-            }
+            if (key) foundKeys.add(key);
+          }
+
+          destructureRegex.lastIndex = 0;
+          while ((match = destructureRegex.exec(content)) !== null) {
+            match[1].split(",").forEach(part => {
+              // Handle renamed destructuring: { DB_URL: dbUrl } — use the left side
+              const key = part.trim().split(/\s*:\s*/)[0].trim();
+              if (/^[A-Z_][A-Z0-9_]*$/.test(key)) foundKeys.add(key);
+            });
+          }
+
+          viteRegex.lastIndex = 0;
+          while ((match = viteRegex.exec(content)) !== null) {
+            if (match[1]) foundKeys.add(match[1]);
           }
         }
       }
