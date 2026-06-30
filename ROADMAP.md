@@ -1,6 +1,6 @@
 # env-drift-check — Adoption Roadmap
 
-> Last updated: 2026-06-26
+> Last updated: 2026-06-30
 
 This document tracks the strategic roadmap for growing `env-drift-check` into the go-to environment configuration validation tool for modern development teams.
 
@@ -40,20 +40,20 @@ All original roadmap items are delivered. The tool covers:
 
 ---
 
-## Phase 2 — Differentiation `v0.4.x`
+## Phase 2 — Differentiation `v0.4.x` ✅ COMPLETE
 
 **Goal:** Features no other tool has. Own the "modern full-stack env management" category.
 
 | Status | Feature | Notes |
 |---|---|---|
-| ⬜ | **Framework prefix awareness** | Detect Next.js / Vite / CRA from `package.json`; warn when `NEXT_PUBLIC_` leaks a server secret |
-| ⬜ | **Cross-variable conditional rules** | `"requiredIf": { "AUTH_TYPE": "oauth" }` — rules that depend on other variables |
-| ⬜ | **`default` values in schema** | `"PORT": { "type": "number", "default": 3000 }` — enables fail-safe library usage |
-| ⬜ | **`mustBeTrueIn` complement** | Mirror of the existing `mustBeFalseIn` for feature flags |
-| ⬜ | **`--watch` mode** | Re-validate on every `.env` or `envwise.config.json` save |
-| ⬜ | **SARIF output** | `--format sarif` → pipes results into GitHub Security tab |
-| ⬜ | **TypeScript config support** | `envwise.config.ts` alongside JSON for type-safe config with comments |
-| ⬜ | **VS Code extension** | Inline squiggles on `.env` entries that fail schema rules |
+| ✅ | **Framework prefix awareness** | Detects Next.js / Vite / CRA from `package.json`; warns when `NEXT_PUBLIC_` leaks a server secret |
+| ✅ | **Cross-variable conditional rules** | `"requiredIf": { "AUTH_TYPE": "oauth" }` — rules that depend on other variables |
+| ✅ | **`default` values in schema** | `"PORT": { "type": "number", "default": "3000" }` — enables fail-safe library usage |
+| ✅ | **`mustBeTrueIn` complement** | Mirror of `mustBeFalseIn` for enforcing feature flags in production |
+| ✅ | **`--watch` mode** | Re-validates on every `.env` or `envwise.config.json` save (300 ms debounce) |
+| ✅ | **SARIF output** | `--format sarif` → pipes results into GitHub Security tab (rule IDs EDC001–EDC005) |
+| ✅ | **JS config support** | `envwise.config.js` loaded alongside JSON for dynamic configs |
+| ⬜ | **VS Code extension** | Inline squiggles on `.env` entries that fail schema rules (separate project) |
 
 ---
 
@@ -100,7 +100,7 @@ All original roadmap items are delivered. The tool covers:
 | `diff` two env files | ❌ | ❌ | ✅ |
 | Git safety audit | ❌ | ❌ | ✅ |
 | Entropy-based secret check | ❌ | ❌ | ✅ |
-| Framework prefix awareness | ❌ | ❌ | Planned v0.4 |
+| Framework prefix awareness | ❌ | ❌ | ✅ |
 | K8s ConfigMap generation | ❌ | ❌ | Planned v0.5 |
 
 ---
@@ -108,9 +108,9 @@ All original roadmap items are delivered. The tool covers:
 ## Version Timeline
 
 ```
-v0.2.3  ──  v0.3.x  ──────────  v0.4.x  ──────  v0.5.x  ──  v1.0
- done      COMPLETE ✅          Differentiate     Platform    Stable
-           Foundation           (next)           (6–8 wks)
+v0.2.3  ──  v0.3.x  ──────────  v0.4.x  ──────────  v0.5.x  ──  v1.0
+ done      COMPLETE ✅          COMPLETE ✅           Platform    Stable
+           Foundation           Differentiation      (next)
            & Trust
 ```
 

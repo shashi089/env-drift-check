@@ -125,6 +125,23 @@ describe("validateValue — regex", () => {
   });
 });
 
+describe("validateValue — mustBeTrueIn", () => {
+  it("enforces mustBeTrueIn production when value is false", () => {
+    const r: Rule = { type: "boolean", mustBeTrueIn: "production" };
+    expect(validateValue("FEATURE_ENABLED", "false", r, prod)).toMatch(/must be true in production/);
+  });
+
+  it("passes when mustBeTrueIn value is true in matching env", () => {
+    const r: Rule = { type: "boolean", mustBeTrueIn: "production" };
+    expect(validateValue("FEATURE_ENABLED", "true", r, prod)).toBeNull();
+  });
+
+  it("does not enforce mustBeTrueIn in a different env", () => {
+    const r: Rule = { type: "boolean", mustBeTrueIn: "production" };
+    expect(validateValue("FEATURE_ENABLED", "false", r, dev)).toBeNull();
+  });
+});
+
 describe("validateValue — entropy / secret strength", () => {
   it("rejects a low-entropy password", () => {
     expect(validateValue("DB_PASSWORD", "aaaaaaaaa", { type: "string", checkSecretStrength: true }, dev))

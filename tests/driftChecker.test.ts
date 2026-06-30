@@ -65,6 +65,38 @@ describe("checkDrift — schema validation", () => {
   });
 });
 
+describe("checkDrift — default values", () => {
+  it("does not mark a key as missing when it has a default", () => {
+    const config: Config = { rules: { PORT: { type: "number", default: "3000" } } };
+    const result = checkDrift({ PORT: "" }, {}, config);
+    expect(result.missing).not.toContain("PORT");
+  });
+
+  it("validates the default value through schema rules", () => {
+    const config: Config = { rules: { PORT: { type: "number", min: 1024, default: "80" } } };
+    const result = checkDrift({ PORT: "" }, {}, config);
+    expect(result.errors.some(e => e.key === "PORT")).toBe(true);
+  });
+});
+
+describe("checkDrift — requiredIf conditional rules", () => {
+  it("marks key as missing when requiredIf condition is met", () => {
+    const config: Config = {
+      rules: { OAUTH_CLIENT_ID: { type: "string", requiredIf: { AUTH_TYPE: "oauth" } } }
+    };
+    const result = checkDrift({ OAUTH_CLIENT_ID: "" }, { AUTH_TYPE: "oauth" }, config);
+    expect(result.missing).toContain("OAUTH_CLIENT_ID");
+  });
+
+  it("does not mark key as missing when requiredIf condition is not met", () => {
+    const config: Config = {
+      rules: { OAUTH_CLIENT_ID: { type: "string", requiredIf: { AUTH_TYPE: "oauth" } } }
+    };
+    const result = checkDrift({ OAUTH_CLIENT_ID: "" }, { AUTH_TYPE: "local" }, config);
+    expect(result.missing).not.toContain("OAUTH_CLIENT_ID");
+  });
+});
+
 describe("checkDrift — systemEnv fallback", () => {
   it("treats process.env as the target when includeSystemEnv is true", () => {
     const original = process.env["TEST_SYS_KEY"];

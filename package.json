@@ -1,6 +1,6 @@
 {
   "name": "env-drift-check",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "CLI tool for .env validation, schema checking, drift detection, environment diff, git audit, and codebase scanning. Zero-code-change alternative to dotenv-safe and envalid.",
   "keywords": [
     "env",
@@ -65,9 +65,10 @@
     "prompts": "^2.4.2"
   },
   "devDependencies": {
+    "@types/node": "^26.0.1",
     "@types/prompts": "^2.4.9",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
-    "vitest": "^4.1.9"
+    "vitest": "^2.1.9"
   }
 }

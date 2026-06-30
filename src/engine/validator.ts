@@ -43,6 +43,7 @@ function validateString(key: string, value: string, rule: Rule): string | null {
 function validateBoolean(key: string, value: string, rule: Rule, env: string): string | null {
   if (value !== "true" && value !== "false") return `${key} must be true or false`;
   if (rule.mustBeFalseIn === env && value === "true") return `${key} must be false in ${env}`;
+  if (rule.mustBeTrueIn === env && value === "false") return `${key} must be true in ${env}`;
   return null;
 }
 

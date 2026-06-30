@@ -14,13 +14,22 @@ export interface Rule {
   max?: number;
   /** A helpful description displayed during interactive CLI setup. */
   description?: string;
-  /** Environment(s) where this boolean must be false (useful for safety flags). */
+  /** Environment name where this boolean must be false (e.g. "production"). */
   mustBeFalseIn?: string;
+  /** Environment name where this boolean must be true (e.g. "production"). */
+  mustBeTrueIn?: string;
   /** Whether the variable is mandatory. Defaults to true. */
   required?: boolean;
-  /** If true, runs security / entropy checks to ensure passwords or keys are not weak. */
+  /**
+   * Makes this key required only when another key has a specific value.
+   * Example: { "AUTH_TYPE": "oauth" } means this key is required when AUTH_TYPE === "oauth".
+   */
+  requiredIf?: Record<string, string>;
+  /** Default value used when the key is absent. Prevents the key from appearing in 'missing'. */
+  default?: string;
+  /** If true, runs entropy checks to ensure passwords or keys are not weak. */
   checkSecretStrength?: boolean;
-  /** Marks the key as deprecated. If true, prints a warning. Can also be a string containing a custom deprecation message. */
+  /** Marks the key as deprecated. If true, prints a warning. Can also be a migration message string. */
   deprecated?: boolean | string;
 }
 
@@ -34,6 +43,11 @@ export interface Config {
   rules?: Record<string, Rule>;
   /** Whether to fall back to process.env during checks. */
   includeSystemEnv?: boolean;
+  /**
+   * Framework hint for prefix-awareness warnings.
+   * "auto" (default) detects from package.json; set explicitly to disable or override.
+   */
+  framework?: "nextjs" | "vite" | "cra" | "auto" | "none";
 }
 
 /**

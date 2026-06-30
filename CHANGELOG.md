@@ -10,6 +10,29 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 
 ---
 
+## [0.4.0] — 2026-06-30
+
+### Added
+
+- **Framework prefix awareness** — Detects Next.js, Vite, and CRA from the project's `package.json`. Warns when a variable with a browser-exposed prefix (`NEXT_PUBLIC_`, `VITE_`, `REACT_APP_`) has a name that suggests it is a secret (matches `SECRET|PASSWORD|PRIVATE|TOKEN|KEY|CREDENTIAL|CERT|SEED`).
+- **`requiredIf` conditional rules** — A key can be declared optional by default but required when another variable has a specific value. Example: `"requiredIf": { "AUTH_TYPE": "oauth" }` makes `OAUTH_CLIENT_ID` mandatory only when oauth is selected.
+- **`default` values in schema** — A rule can now carry a `"default"` field. Keys with a default are never reported as missing; the default value is passed through the same schema validation as real values.
+- **`mustBeTrueIn` enforcement** — Complements the existing `mustBeFalseIn`. Enforces that a boolean variable is `"true"` in a specific environment (e.g., `"mustBeTrueIn": "production"` for mandatory feature flags).
+- **`--watch` / `-w` mode** — Watches all relevant files (base env, target envs, config files) and re-runs validation automatically on any save with a 300 ms debounce. Console clears between runs for a clean view.
+- **SARIF 2.1.0 output** — `--format sarif` emits a standards-compliant SARIF document. Pipe it into the GitHub Security tab via `upload-sarif` in a GitHub Actions workflow. Rule IDs: `EDC001` (MissingKey), `EDC002` (ValidationError), `EDC003` (ExtraKey), `EDC004` (DeprecationWarning), `EDC005` (ValueMismatch).
+- **JS config support** — `envwise.config.js` is now loaded as a fallback when no JSON config is present, enabling dynamic configurations and configs with comments.
+- **12 new tests** for framework detection and warning generation (`frameworkChecker.test.ts`); 4 new tests for `default` and `requiredIf` in `driftChecker.test.ts`; 3 new `mustBeTrueIn` tests in `validator.test.ts`. Total: **66 tests**.
+
+### Changed
+
+- `src/types.ts` — `Rule` extended with `requiredIf`, `default`, and `mustBeTrueIn`; `Config` extended with `framework` field.
+- `src/engine/driftChecker.ts` — Refactored to support `default`, `requiredIf`, and appended framework warnings.
+- `src/index.ts` — Exports `frameworkChecker` and `sarifReporter` for programmatic use.
+- `tsconfig.json` — Added `"types": ["node"]` to ensure Node globals are available in test files.
+- `vitest` downgraded from 4.x → 2.x for Node 18 LTS compatibility.
+
+---
+
 ## [0.3.0] — 2026-06-26
 
 ### Added
@@ -101,7 +124,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 
 ---
 
-[Unreleased]: https://github.com/shashi089/env-drift-check/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/shashi089/env-drift-check/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/shashi089/env-drift-check/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/shashi089/env-drift-check/compare/v0.2.3...v0.3.0
 [0.2.3]: https://github.com/shashi089/env-drift-check/compare/v0.2.1...v0.2.3
 [0.2.1]: https://github.com/shashi089/env-drift-check/compare/v0.2.0...v0.2.1

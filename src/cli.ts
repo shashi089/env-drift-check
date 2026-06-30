@@ -12,6 +12,7 @@ import { updateEnvFile } from "./engine/envWriter";
 import { loadConfig } from "./config/loadConfig";
 import { generateExampleFile } from "./engine/envGenerator";
 import { scanCodebase } from "./engine/codeScanner";
+import { toSarif } from "./reporter/sarifReporter";
 import type { Config, DriftResult } from "./types";
 
 const program = new Command();
@@ -19,7 +20,7 @@ const program = new Command();
 program
   .name("env-drift-check")
   .description("Interactive .env synchronizer and validator")
-  .version("0.3.0");
+  .version("0.4.0");
 
 // ─── check helpers ────────────────────────────────────────────────────────────
 
@@ -70,16 +71,19 @@ program
   .option("-s, --strict", "Fail with non-zero exit code if issues are found")
   .option("-a, --all", "Check all .env* files in the current directory")
   .option("--system-env", "Fallback to process.env during verification")
-  .option("-f, --format <format>", "Output format: text or json", "text")
+  .option("-f, --format <format>", "Output format: text, json, or sarif", "text")
+  .option("-w, --watch", "Re-validate automatically on .env or config file changes")
   .action(async (file, options) => {
     const config = loadConfig();
     if (options.systemEnv) config.includeSystemEnv = true;
 
     const basePath = path.resolve(options.base ?? config.baseEnv ?? ".env.example");
-    const isJson = options.format === "json";
+    const isJson  = options.format === "json";
+    const isSarif = options.format === "sarif";
+    const isSilent = isJson || isSarif;
 
     if (!fs.existsSync(basePath)) {
-      if (!isJson) console.error(`Reference file missing: ${basePath}`);
+      if (!isSilent) console.error(`Reference file missing: ${basePath}`);
       process.exit(1);
     }
 
@@ -88,19 +92,19 @@ program
 
     async function runForFile(targetFile: string): Promise<boolean> {
       const targetPath = path.resolve(targetFile);
-      const targetEnv = resolveTargetEnv(targetPath, !!options.systemEnv, isJson);
+      const targetEnv = resolveTargetEnv(targetPath, !!options.systemEnv, isSilent);
       if (targetEnv === null) return false;
 
       const fileExists = fs.existsSync(targetPath);
-      logCheckHeader(targetPath, basePath, fileExists, isJson);
+      logCheckHeader(targetPath, basePath, fileExists, isSilent);
 
       let result = checkDrift(baseEnv, targetEnv, config);
 
       if (result.missing.length > 0 && options.interactive) {
-        result = await applyInteractiveFix(targetPath, fileExists, result.missing, baseEnv, config, targetEnv, isJson);
+        result = await applyInteractiveFix(targetPath, fileExists, result.missing, baseEnv, config, targetEnv, isSilent);
       }
 
-      if (!isJson) report(result);
+      if (!isSilent) report(result);
 
       const success = !result.missing.length && !result.mismatches.length && !result.errors.length;
       runResults[targetFile] = { success, result };
@@ -111,17 +115,54 @@ program
       ? fs.readdirSync(process.cwd()).filter(f => f.startsWith(".env") && f !== path.basename(basePath))
       : [file];
 
-    let overallSuccess = true;
-    for (const f of allFiles) {
-      const ok = await runForFile(f);
-      if (!ok) overallSuccess = false;
+    async function runAll(): Promise<boolean> {
+      let overallSuccess = true;
+      for (const f of allFiles) {
+        const ok = await runForFile(f);
+        if (!ok) overallSuccess = false;
+      }
+      return overallSuccess;
     }
 
-    if (isJson) console.log(JSON.stringify(runResults, null, 2));
+    const overallSuccess = await runAll();
+
+    if (isJson)  console.log(JSON.stringify(runResults, null, 2));
+    if (isSarif) console.log(toSarif(runResults));
 
     if (options.strict && !overallSuccess) {
-      if (!isJson) console.error("\n Strict mode failed for one or more files");
+      if (!isSilent) console.error("\n Strict mode failed for one or more files");
       process.exit(1);
+    }
+
+    if (options.watch) {
+      const watchPaths = [...new Set([
+        basePath,
+        path.resolve("envwise.config.json"),
+        path.resolve("envwise.config.js"),
+        ...allFiles.map(f => path.resolve(f))
+      ])].filter(f => fs.existsSync(f));
+
+      console.log("\n👀 Watching for changes... (Ctrl+C to stop)\n");
+
+      let debounce: ReturnType<typeof setTimeout>;
+      let running = false;
+
+      for (const wp of watchPaths) {
+        fs.watch(wp, () => {
+          clearTimeout(debounce);
+          debounce = setTimeout(async () => {
+            if (running) return;
+            running = true;
+            console.clear();
+            console.log("🔄 Change detected — re-running check...\n");
+            Object.keys(runResults).forEach(k => delete runResults[k]);
+            await runAll();
+            if (isJson)  console.log(JSON.stringify(runResults, null, 2));
+            if (isSarif) console.log(toSarif(runResults));
+            running = false;
+          }, 300);
+        });
+      }
     }
   });
 
