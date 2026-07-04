@@ -13,6 +13,8 @@ import { loadConfig } from "./config/loadConfig";
 import { generateExampleFile } from "./engine/envGenerator";
 import { scanCodebase } from "./engine/codeScanner";
 import { toSarif } from "./reporter/sarifReporter";
+import { generateK8sManifests } from "./engine/k8sGenerator";
+import { validateCompose } from "./engine/composeValidator";
 import type { Config, DriftResult } from "./types";
 
 const program = new Command();
@@ -352,6 +354,127 @@ program
     }
 
     console.log("\nSetup complete! Run 'npx env-drift-check -i' to sync your .env file.");
+  });
+
+// ─── gen-configmap ─────────────────────────────────────────────────────────────
+
+program
+  .command("gen-configmap")
+  .description("Split a .env file into a Kubernetes ConfigMap (safe) and Secret (sensitive)")
+  .argument("[file]", "Source .env file", ".env")
+  .option("-o, --output <file>", "Output YAML file", "k8s-env.yaml")
+  .option("-n, --name <name>", "Base name for the K8s resources", "app-config")
+  .option("--namespace <ns>", "Kubernetes namespace", "default")
+  .action((file, options) => {
+    const envFile = path.resolve(file);
+    if (!fs.existsSync(envFile)) {
+      console.error(`File not found: ${file}`);
+      process.exit(1);
+    }
+
+    const config = loadConfig();
+    const result = generateK8sManifests({
+      envFile,
+      outputFile: path.resolve(options.output),
+      name: options.name,
+      namespace: options.namespace,
+      config,
+    });
+
+    console.log(`\n Generated: ${result.outputPath}\n`);
+
+    if (result.configMapKeys.length > 0) {
+      console.log(`  ConfigMap — ${result.configMapKeys.length} key(s):`);
+      result.configMapKeys.forEach(k => console.log(`    ${k}`));
+    }
+
+    if (result.secretKeys.length > 0) {
+      console.log(`\n  Secret — ${result.secretKeys.length} key(s) (values base64-encoded):`);
+      result.secretKeys.forEach(k => console.log(`    ${k}`));
+    }
+
+    if (result.configMapKeys.length === 0 && result.secretKeys.length === 0) {
+      console.log("  No keys found in source file.");
+    }
+
+    console.log();
+  });
+
+// ─── validate-compose ──────────────────────────────────────────────────────────
+
+program
+  .command("validate-compose")
+  .description("Validate environment blocks in docker-compose.yml against the schema")
+  .argument("[file]", "docker-compose.yml file", "docker-compose.yml")
+  .option("-b, --base <schema>", "Reference .env file (used when no schema rules defined)", ".env.example")
+  .option("-s, --strict", "Exit with non-zero code if unknown or missing keys are found")
+  .action((file, options) => {
+    const composePath = path.resolve(file);
+    if (!fs.existsSync(composePath)) {
+      console.error(`File not found: ${file}`);
+      process.exit(1);
+    }
+
+    const config = loadConfig();
+
+    // If no rules defined in config, fall back to base env keys as the schema
+    if (!config.rules || Object.keys(config.rules).length === 0) {
+      const basePath = path.resolve(options.base ?? config.baseEnv ?? ".env.example");
+      if (fs.existsSync(basePath)) {
+        const baseKeys = Object.keys(parseEnv(basePath));
+        config.rules = Object.fromEntries(baseKeys.map(k => [k, { type: "string" as const }]));
+      }
+    }
+
+    console.log(`\n Validating ${path.basename(composePath)}...\n`);
+
+    let result;
+    try {
+      result = validateCompose(composePath, config);
+    } catch (err: unknown) {
+      console.error(`Failed to parse ${file}: ${err instanceof Error ? err.message : err}`);
+      process.exit(1);
+    }
+
+    for (const svc of result.services) {
+      console.log(` Service: ${svc.service}`);
+
+      if (svc.envFileRefs.length > 0) {
+        console.log(`   ℹ env_file: ${svc.envFileRefs.join(", ")} — vars resolved at runtime`);
+      }
+
+      if (svc.definedKeys.length === 0 && svc.envFileRefs.length === 0) {
+        console.log("   (no environment block)");
+      }
+
+      for (const k of svc.definedKeys) {
+        const isUnknown = svc.unknownKeys.includes(k);
+        console.log(`   ${isUnknown ? "✖" : "✔"} ${k}${isUnknown ? " — not in schema" : ""}`);
+      }
+
+      for (const k of svc.missingRequiredKeys) {
+        console.log(`   ⚠ ${k} — required in schema but not set`);
+      }
+
+      console.log();
+    }
+
+    if (result.services.length === 0) {
+      console.log("  No services found in compose file.");
+    } else {
+      const summaryParts: string[] = [];
+      if (result.totalUnknown > 0) summaryParts.push(`${result.totalUnknown} unknown key(s)`);
+      if (result.totalMissing > 0) summaryParts.push(`${result.totalMissing} missing required key(s)`);
+
+      if (summaryParts.length === 0) {
+        console.log(" ✔ All environment vars match the schema.");
+      } else {
+        console.log(` ⚠️  Issues found: ${summaryParts.join(", ")}`);
+        if (options.strict) process.exit(1);
+      }
+    }
+
+    console.log();
   });
 
 program.parse(process.argv);
