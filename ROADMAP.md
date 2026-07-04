@@ -63,8 +63,8 @@ All original roadmap items are delivered. The tool covers:
 
 | Status | Feature | Notes |
 |---|---|---|
-| ⬜ | **Kubernetes ConfigMap generator** | `gen-configmap`: splits `.env` into a K8s `ConfigMap` (safe) + `Secret` (sensitive) |
-| ⬜ | **Docker Compose env validation** | Parse `docker-compose.yml` and validate `environment:` blocks against schema |
+| ✅ | **Kubernetes ConfigMap generator** | `gen-configmap`: splits `.env` into a K8s `ConfigMap` (safe) + `Secret` (sensitive) |
+| ✅ | **Docker Compose env validation** | Parse `docker-compose.yml` and validate `environment:` blocks against schema |
 | ⬜ | **GitHub Actions marketplace action** | `uses: shashi089/env-drift-check@v1` — star counts, one-click CI adoption |
 | ⬜ | **Config inheritance / extends** | `"extends": ".env.base.config.json"` with per-environment overrides |
 | ⬜ | **Monorepo support** | Recursively validate env files across `packages/*`, aggregate results |
