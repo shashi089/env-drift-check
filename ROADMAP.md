@@ -57,7 +57,15 @@ All original roadmap items are delivered. The tool covers:
 
 ---
 
-## Phase 3 — Platform Ready `v0.5.x`
+## Patch — `v0.4.1` (next)
+
+**Goal:** Small fixes and improvements on top of v0.4.0.
+
+> Items to be confirmed before release.
+
+---
+
+## Phase 3 — Platform Ready `v0.5.0`
 
 **Goal:** Support infrastructure-level workflows. Attract DevOps and platform engineers.
 
@@ -108,10 +116,10 @@ All original roadmap items are delivered. The tool covers:
 ## Version Timeline
 
 ```
-v0.2.3  ──  v0.3.x  ──────────  v0.4.x  ──────────  v0.5.x  ──  v1.0
- done      COMPLETE ✅          COMPLETE ✅           Platform    Stable
-           Foundation           Differentiation      (next)
-           & Trust
+v0.3.x  ──  v0.4.0  ──  v0.4.1  ──  v0.5.0  ──  v1.0
+COMPLETE ✅  CURRENT ✅   next        Platform    Stable
+Foundation  Differentiation  (patch)   Ready
+& Trust     complete
 ```
 
 ---

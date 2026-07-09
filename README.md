@@ -91,33 +91,39 @@ Add `npx env-drift-check --system-env --strict` to your GitHub Actions workflow.
 - 📊 **Environment Diff** — Side-by-side comparison of two `.env` files showing added, removed, and changed keys.
 - 🔐 **Git Safety Audit** — Detects `.env` files missing from `.gitignore`, currently tracked by git, or found in git history.
 - 🧂 **Entropy-Based Secret Scoring** — Flags low-entropy secrets using Shannon entropy math — not a simple blocklist.
+- 🧩 **Framework Prefix Safety** — Auto-detects Next.js, Vite, and CRA. Warns when `NEXT_PUBLIC_`, `VITE_`, or `REACT_APP_` prefixed variables look like secrets.
+- 🔗 **Conditional Required Rules** — `requiredIf` makes a key required only when another key has a specific value (e.g. `S3_BUCKET` only when `STORAGE=s3`).
 - 📁 **Template Generator** — Creates or updates `.env.example` from your local `.env`, stripping values and preserving formatting.
 - 🪄 **Interactive Auto-fix Wizard** — Prompts for missing variables with live validation and secret masking.
 - ⚡ **Process Environment Fallback** — Validates against `process.env` (via `--system-env`) for containers and serverless.
-- ⚙️ **JSON Output** — `--format json` for piping results into Slack bots, custom dashboards, or other toolchains.
+- ⚙️ **JSON & SARIF Output** — `--format json` for toolchain integrations, `--format sarif` to upload results to the GitHub Security tab.
 - ⚠️ **Variable Deprecation** — Flag legacy keys with custom migration warnings.
 - 📑 **High-Fidelity Formatting** — Preserves inline comments, blank lines, and key order when writing back to `.env`.
 - 🔄 **Multi-Environment Support** — Check all `.env*` files simultaneously with `--all`.
+- 👀 **Watch Mode** — `--watch` re-validates automatically on every `.env` or config file save.
 - 🚦 **CI/CD Ready** — `--strict` mode exits with code `1` on any validation failure.
+- 🐳 **Docker Compose Validation** — Validates `environment:` blocks in `docker-compose.yml` against your schema.
+- ☸️ **Kubernetes ConfigMap Generator** — Splits `.env` into a K8s `ConfigMap` (safe keys) and `Secret` (sensitive keys).
 
 ---
 
 ## 🆚 How Does It Compare?
 
-| Feature | `dotenv-safe` | `envalid` | **`env-drift-check`** |
-| :--- | :---: | :---: | :---: |
-| Missing key detection | ✅ | ✅ | ✅ |
-| Schema / type validation | ❌ | ✅ (in code) | ✅ (JSON config) |
-| No code changes required | ❌ | ❌ | ✅ |
-| Interactive CLI fix wizard | ❌ | ❌ | ✅ |
-| Codebase scanner | ❌ | ❌ | ✅ |
-| Diff two env files | ❌ | ❌ | ✅ |
-| Git safety audit | ❌ | ❌ | ✅ |
-| Entropy-based secret check | ❌ | ❌ | ✅ |
-| Formatting preservation | ❌ | ❌ | ✅ |
-| Multi-env file check | ❌ | ❌ | ✅ |
-| CI/CD strict mode | ❌ | ❌ | ✅ |
-| Zero runtime code changes | ❌ | ❌ | ✅ |
+| Feature | `dotenv-safe` | `envalid` | `dotenv-linter` | `dotenvx` | **`env-drift-check`** |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Missing key detection | ✅ | ✅ | ✅ | ⚠️ basic | ✅ |
+| Runtime library | ✅ | ✅ | ❌ | ✅ | ⚠️ secondary |
+| CI/CD friendly | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Encryption | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Standalone CLI | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Schema validation (no code changes) | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Interactive fix wizard | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Codebase scanner | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Entropy-based secret scoring | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Git safety audit | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Environment diff | ❌ | ❌ | ✅ | ❌ | ✅ |
+| Framework prefix safety | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Docker / Kubernetes support | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -255,7 +261,7 @@ npx env-drift-check scan
 🔍 Scanning codebase for process.env references...
 Scanned 12 source file(s).
 
-🔑 Environment variables referenced in code:
+🔑 Found 4 environment variable(s) referenced in code:
  - API_SECRET_KEY
  - DATABASE_URL
  - NODE_ENV
@@ -269,6 +275,44 @@ Auto-append missing keys to `.env.example`:
 
 ```bash
 npx env-drift-check scan --fix
+```
+
+**No `.env.example` yet?** `scan` still works — it lists every env variable found in your codebase without needing any reference file:
+
+```bash
+npx env-drift-check scan
+```
+
+```text
+🔍 Scanning codebase for process.env references...
+Scanned 12 source file(s).
+
+🔑 Found 4 environment variable(s) referenced in code:
+ - API_SECRET_KEY
+ - DATABASE_URL
+ - NODE_ENV
+ - PORT
+
+ℹ️  No reference file found (.env.example). Run with --fix to create one from the keys above.
+```
+
+Run `scan --fix` to **create** `.env.example` from scratch using the keys found in your code:
+
+```bash
+npx env-drift-check scan --fix
+```
+
+```text
+🔍 Scanning codebase for process.env references...
+Scanned 12 source file(s).
+
+🔑 Found 4 environment variable(s) referenced in code:
+ - API_SECRET_KEY
+ - DATABASE_URL
+ - NODE_ENV
+ - PORT
+
+✅ Created .env.example with 4 key(s).
 ```
 
 ### Step 4: Generate `.env.example`
@@ -359,9 +403,12 @@ npx env-drift-check --system-env --strict --format json
 | Option | Type | Description |
 |---|---|---|
 | `required` | `boolean` | Defaults to `true`. Set `false` to make optional. |
+| `default` | `string` | Fallback value when the key is absent. |
 | `description` | `string` | Shown in interactive prompts to guide developers. |
 | `checkSecretStrength` | `boolean` | Scores entropy. Auto-enabled for keys containing `SECRET` or `PASSWORD`. |
 | `mustBeFalseIn` | `string` | Environment name where a boolean must be `false` (e.g. `"production"`). |
+| `mustBeTrueIn` | `string` | Environment name where a boolean must be `true` (e.g. `"production"`). |
+| `requiredIf` | `Record<string, string>` | Makes the key required only when another key matches a value (e.g. `{ "STORAGE": "s3" }`). |
 | `deprecated` | `boolean \| string` | Emits a deprecation warning. Provide a string for a migration message. |
 
 ---
@@ -375,12 +422,16 @@ npx env-drift-check --system-env --strict --format json
 | `env-drift-check --strict` | Exit code `1` on any issue (for CI/CD) |
 | `env-drift-check --all` | Check all `.env*` files in the directory |
 | `env-drift-check --system-env` | Validate against `process.env` (containers/serverless) |
+| `env-drift-check --watch` | Re-validate on every `.env` or config file save |
 | `env-drift-check --format json` | JSON output for toolchain integration |
+| `env-drift-check --format sarif` | SARIF output for GitHub Security tab |
 | `env-drift-check scan` | Scan codebase for `process.env` usage vs `.env.example` |
-| `env-drift-check scan --fix` | Auto-append missing keys to `.env.example` |
+| `env-drift-check scan --fix` | Create or append missing keys to `.env.example` |
 | `env-drift-check diff <a> <b>` | Side-by-side diff of two `.env` files |
 | `env-drift-check audit` | Check `.env` files for git tracking and history leaks |
 | `env-drift-check gen-example` | Generate `.env.example` from your local `.env` |
+| `env-drift-check gen-configmap` | Split `.env` into a K8s ConfigMap + Secret YAML |
+| `env-drift-check validate-compose` | Validate `docker-compose.yml` env blocks against schema |
 | `env-drift-check init` | Scaffold `envwise.config.json` and `.env.example` |
 
 ---
@@ -556,12 +607,15 @@ See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
 See [ROADMAP.md](ROADMAP.md) for the full adoption roadmap.
 
-**Upcoming in v0.4.x:**
-- Framework prefix awareness (Next.js `NEXT_PUBLIC_`, Vite `VITE_`)
-- Cross-variable conditional rules (`requiredIf`)
-- `default` values in schema
-- `--watch` mode
-- SARIF output for GitHub Security tab
+**Current: v0.4.0** — All Phase 2 features shipped, including framework prefix safety, `requiredIf` conditional rules, `default` values, `--watch` mode, and SARIF output.
+
+**Next: v0.4.1** — Small fixes and improvements.
+
+**Upcoming: v0.5.0**
+- GitHub Actions marketplace action (`uses: shashi089/env-drift-check@v1`)
+- Config inheritance / extends for per-environment overrides
+- Monorepo support — validate across `packages/*` and aggregate results
+- Secret manager integrations (Doppler, AWS SSM, Vault)
 
 ---
 
