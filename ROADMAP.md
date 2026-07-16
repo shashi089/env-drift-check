@@ -1,6 +1,6 @@
 # env-drift-check — Adoption Roadmap
 
-> Last updated: 2026-06-30
+> Last updated: 2026-07-10
 
 This document tracks the strategic roadmap for growing `env-drift-check` into the go-to environment configuration validation tool for modern development teams.
 
@@ -53,7 +53,6 @@ All original roadmap items are delivered. The tool covers:
 | ✅ | **`--watch` mode** | Re-validates on every `.env` or `envwise.config.json` save (300 ms debounce) |
 | ✅ | **SARIF output** | `--format sarif` → pipes results into GitHub Security tab (rule IDs EDC001–EDC005) |
 | ✅ | **JS config support** | `envwise.config.js` loaded alongside JSON for dynamic configs |
-| ⬜ | **VS Code extension** | Inline squiggles on `.env` entries that fail schema rules (separate project) |
 
 ---
 
@@ -65,7 +64,7 @@ All original roadmap items are delivered. The tool covers:
 
 ---
 
-## Phase 3 — Platform Ready `v0.5.0`
+## Phase 3 — Platform Ready `v0.5.0` ✅ COMPLETE
 
 **Goal:** Support infrastructure-level workflows. Attract DevOps and platform engineers.
 
@@ -73,10 +72,9 @@ All original roadmap items are delivered. The tool covers:
 |---|---|---|
 | ✅ | **Kubernetes ConfigMap generator** | `gen-configmap`: splits `.env` into a K8s `ConfigMap` (safe) + `Secret` (sensitive) |
 | ✅ | **Docker Compose env validation** | Parse `docker-compose.yml` and validate `environment:` blocks against schema |
-| ⬜ | **GitHub Actions marketplace action** | `uses: shashi089/env-drift-check@v1` — star counts, one-click CI adoption |
-| ⬜ | **Config inheritance / extends** | `"extends": ".env.base.config.json"` with per-environment overrides |
-| ⬜ | **Monorepo support** | Recursively validate env files across `packages/*`, aggregate results |
-| ⬜ | **Secret manager integrations** | Read from Doppler, AWS SSM, or Vault to validate live secrets without exposing them |
+| ✅ | **GitHub Actions marketplace action** | `uses: shashi089/env-drift-check@v1` — composite action with inputs for all commands and flags |
+| ✅ | **Config inheritance / extends** | `"extends": ".env.base.config.json"` with per-environment overrides |
+| ✅ | **Monorepo support** | Recursively validate env files across `packages/*`, aggregate results |
 
 ---
 
@@ -87,29 +85,29 @@ All original roadmap items are delivered. The tool covers:
 | Status | Item |
 |---|---|
 | ⬜ | API stability guarantee — no breaking changes in `Rule`, `Config`, `DriftResult` interfaces |
-| ⬜ | Full migration guide from `dotenv-safe` and `envalid` |
+| ⬜ | Full migration guide from `dotenv-safe`, `envalid`, `dotenv-linter`, and `dotenvx` |
 | ⬜ | Dedicated docs site (VitePress or Starlight) |
 | ⬜ | `CHANGELOG.md` with semantic versioning from this point |
-| ⬜ | Published GitHub Actions action on the marketplace |
-| ⬜ | Python / Go / Ruby codebase scanner support |
 
 ---
 
 ## Competitive Position
 
-| Feature | `dotenv-safe` | `envalid` | **`env-drift-check`** |
-|---|:---:|:---:|:---:|
-| Missing key detection | ✅ | ✅ | ✅ |
-| Schema / type validation | ❌ | ✅ | ✅ |
-| Interactive CLI fix | ❌ | ❌ | ✅ |
-| Zero code changes needed | ❌ | ❌ | ✅ |
-| Codebase scanner | ❌ | ❌ | ✅ |
-| Formatting preservation | ❌ | ❌ | ✅ |
-| `diff` two env files | ❌ | ❌ | ✅ |
-| Git safety audit | ❌ | ❌ | ✅ |
-| Entropy-based secret check | ❌ | ❌ | ✅ |
-| Framework prefix awareness | ❌ | ❌ | ✅ |
-| K8s ConfigMap generation | ❌ | ❌ | Planned v0.5 |
+| Feature | `dotenv-safe` | `envalid` | `dotenv-linter` | `dotenvx` | **`env-drift-check`** |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Missing key detection | ✅ | ✅ | ✅ | ⚠️ basic | ✅ |
+| Runtime library | ✅ | ✅ | ❌ | ✅ | ⚠️ secondary |
+| CI/CD friendly | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Encryption | ❌ | ❌ | ❌ | ✅ | ❌ |
+| Standalone CLI | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Schema validation (no code changes) | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Interactive fix wizard | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Codebase scanner | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Entropy-based secret scoring | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Git safety audit | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Environment diff | ❌ | ❌ | ✅ | ❌ | ✅ |
+| Framework prefix safety | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Docker / Kubernetes support | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -117,13 +115,13 @@ All original roadmap items are delivered. The tool covers:
 
 ```
 v0.3.x  ──  v0.4.0  ──  v0.4.1  ──  v0.5.0  ──  v1.0
-COMPLETE ✅  CURRENT ✅   next        Platform    Stable
-Foundation  Differentiation  (patch)   Ready
-& Trust     complete
+COMPLETE ✅  COMPLETE ✅   next        COMPLETE ✅  Stable
+Foundation  Differentiation  (patch)   Platform
+& Trust     complete                   Ready
 ```
 
 ---
 
 ## Contributing
 
-Want to help ship Phase 2 or 3? Check the [issues](https://github.com/shashi089/env-drift-check/issues) or open a discussion. Features are tagged by phase.
+Want to help ship Phase 3? Check the [issues](https://github.com/shashi089/env-drift-check/issues) or open a discussion. Features are tagged by phase.

@@ -1,0 +1,62 @@
+name: 'env-drift-check'
+description: 'Detect .env drift, enforce schema validation, and audit git safety — zero config'
+author: 'Shashidhar Naik'
+
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  command:
+    description: 'Command to run: check, scan, audit'
+    required: false
+    default: 'check'
+  file:
+    description: 'Target .env file to validate'
+    required: false
+    default: '.env'
+  base:
+    description: 'Reference .env file to check against'
+    required: false
+    default: '.env.example'
+  strict:
+    description: 'Exit with code 1 if any issues are found'
+    required: false
+    default: 'false'
+  format:
+    description: 'Output format: text, json, or sarif'
+    required: false
+    default: 'text'
+  system-env:
+    description: 'Validate against process.env instead of a file (containers/serverless)'
+    required: false
+    default: 'false'
+  all:
+    description: 'Check all .env* files in the directory'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Run env-drift-check
+      shell: bash
+      run: |
+        ARGS="${{ inputs.command }}"
+
+        if [ "${{ inputs.command }}" = "check" ] && [ "${{ inputs.file }}" != ".env" ]; then
+          ARGS="$ARGS ${{ inputs.file }}"
+        fi
+
+        [ "${{ inputs.base }}" != ".env.example" ] && ARGS="$ARGS --base ${{ inputs.base }}"
+        [ "${{ inputs.strict }}" = "true" ]        && ARGS="$ARGS --strict"
+        [ "${{ inputs.format }}" != "text" ]       && ARGS="$ARGS --format ${{ inputs.format }}"
+        [ "${{ inputs.system-env }}" = "true" ]    && ARGS="$ARGS --system-env"
+        [ "${{ inputs.all }}" = "true" ]           && ARGS="$ARGS --all"
+
+        npx --yes env-drift-check $ARGS

@@ -48,6 +48,8 @@ export interface Config {
    * "auto" (default) detects from package.json; set explicitly to disable or override.
    */
   framework?: "nextjs" | "vite" | "cra" | "auto" | "none";
+  /** Path to a base config file to inherit from. Rules are deep-merged; child wins on conflict. */
+  extends?: string;
 }
 
 /**

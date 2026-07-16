@@ -1,6 +1,6 @@
 {
   "name": "env-drift-check",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "CLI tool for .env validation, schema checking, drift detection, environment diff, git audit, and codebase scanning. Zero-code-change alternative to dotenv-safe and envalid.",
   "keywords": [
     "env",

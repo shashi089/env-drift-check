@@ -81,6 +81,9 @@ Add `npx env-drift-check --system-env --strict` to your GitHub Actions workflow.
 ### Git Secret Leak Audit
 `npx env-drift-check audit` checks every `.env*` file against `.gitignore`, live git tracking, and your full git history. Catches leaks before they become a breach.
 
+### Monorepo Validation
+`npx env-drift-check monorepo` walks every package in `packages/*` and `apps/*`, runs a drift check in each one using its own local `envwise.config.json`, and prints an aggregate pass/fail summary.
+
 ---
 
 ## 🚀 Features
@@ -104,6 +107,8 @@ Add `npx env-drift-check --system-env --strict` to your GitHub Actions workflow.
 - 🚦 **CI/CD Ready** — `--strict` mode exits with code `1` on any validation failure.
 - 🐳 **Docker Compose Validation** — Validates `environment:` blocks in `docker-compose.yml` against your schema.
 - ☸️ **Kubernetes ConfigMap Generator** — Splits `.env` into a K8s `ConfigMap` (safe keys) and `Secret` (sensitive keys).
+- 🏗️ **Monorepo Support** — Validates `.env` files across all packages in a monorepo, with per-package config and an aggregate pass/fail summary.
+- 🔗 **Config Inheritance** — `"extends"` lets a child config inherit and override rules from a shared base config file.
 
 ---
 
@@ -366,6 +371,93 @@ npx env-drift-check --system-env --strict --format json
 
 ---
 
+## 🏗️ Monorepo Usage
+
+### Step 1: Structure your monorepo
+
+Each package that has environment variables should have its own `.env.example`:
+
+```
+my-monorepo/
+├── packages/
+│   ├── api/
+│   │   ├── .env
+│   │   ├── .env.example
+│   │   └── envwise.config.json   ← optional, per-package rules
+│   └── web/
+│       ├── .env
+│       ├── .env.example
+│       └── envwise.config.json
+├── apps/
+│   └── dashboard/
+│       ├── .env
+│       └── .env.example
+└── envwise.config.json           ← optional, root-level base config
+```
+
+### Step 2: Optionally share a base config using `extends`
+
+Create a shared base config at the root:
+
+```json
+// envwise.base.config.json
+{
+  "rules": {
+    "NODE_ENV": { "type": "enum", "values": ["development", "staging", "production"] },
+    "LOG_LEVEL": { "type": "enum", "values": ["debug", "info", "warn", "error"] }
+  }
+}
+```
+
+Each package inherits and adds its own rules:
+
+```json
+// packages/api/envwise.config.json
+{
+  "extends": "../../envwise.base.config.json",
+  "rules": {
+    "DATABASE_URL": { "type": "url", "required": true },
+    "JWT_SECRET":   { "type": "string", "checkSecretStrength": true }
+  }
+}
+```
+
+### Step 3: Run across all packages
+
+```bash
+npx env-drift-check monorepo
+```
+
+```text
+  ✔ packages/api
+  ✖ packages/web
+       ✖ Missing: STRIPE_KEY, NEXT_PUBLIC_API_URL
+
+  ✔ apps/dashboard
+
+  ─────────────────────────────────
+  Packages scanned : 3
+  Passing          : 2
+  Failing          : 1
+  ⚠️  1 package(s) have issues.
+```
+
+### Custom package patterns
+
+```bash
+npx env-drift-check monorepo --packages "services/*,libs/*"
+```
+
+### In CI/CD
+
+```bash
+npx env-drift-check monorepo --strict
+```
+
+`--strict` exits with code `1` if any package fails, blocking the pipeline.
+
+---
+
 ## ⚙️ Configuration (`envwise.config.json`)
 
 ### Full Reference
@@ -432,6 +524,8 @@ npx env-drift-check --system-env --strict --format json
 | `env-drift-check gen-example` | Generate `.env.example` from your local `.env` |
 | `env-drift-check gen-configmap` | Split `.env` into a K8s ConfigMap + Secret YAML |
 | `env-drift-check validate-compose` | Validate `docker-compose.yml` env blocks against schema |
+| `env-drift-check monorepo` | Validate all packages in a monorepo, aggregate results |
+| `env-drift-check monorepo --packages <patterns>` | Custom package patterns (default: `packages/*,apps/*`) |
 | `env-drift-check init` | Scaffold `envwise.config.json` and `.env.example` |
 
 ---
@@ -607,14 +701,16 @@ See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
 See [ROADMAP.md](ROADMAP.md) for the full adoption roadmap.
 
-**Current: v0.4.0** — All Phase 2 features shipped, including framework prefix safety, `requiredIf` conditional rules, `default` values, `--watch` mode, and SARIF output.
+**v0.4.0 complete** — Framework prefix safety, `requiredIf`, `default` values, `--watch` mode, SARIF output.
 
-**Next: v0.4.1** — Small fixes and improvements.
+**v0.4.1 complete** — Small fixes and improvements.
 
-**Upcoming: v0.5.0**
-- GitHub Actions marketplace action (`uses: shashi089/env-drift-check@v1`)
-- Config inheritance / extends for per-environment overrides
-- Monorepo support — validate across `packages/*` and aggregate results
+**v0.5.0 complete** — GitHub Actions marketplace action, config inheritance (`extends`), monorepo support, Docker Compose validation, Kubernetes ConfigMap generator.
+
+**Upcoming: v1.0**
+- API stability guarantee — no breaking changes in `Rule`, `Config`, `DriftResult` interfaces
+- Full migration guide from `dotenv-safe`, `envalid`, `dotenv-linter`, and `dotenvx`
+- Dedicated docs site (VitePress or Starlight)
 - Secret manager integrations (Doppler, AWS SSM, Vault)
 
 ---

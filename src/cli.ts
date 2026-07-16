@@ -9,7 +9,7 @@ import { checkDrift } from "./engine/driftChecker";
 import { report } from "./reporter/consoleReporter";
 import { interactiveSetup } from "./engine/interactive";
 import { updateEnvFile } from "./engine/envWriter";
-import { loadConfig } from "./config/loadConfig";
+import { loadConfig, loadConfigFrom } from "./config/loadConfig";
 import { generateExampleFile } from "./engine/envGenerator";
 import { scanCodebase } from "./engine/codeScanner";
 import { toSarif } from "./reporter/sarifReporter";
@@ -485,6 +485,85 @@ program
     }
 
     console.log();
+  });
+
+// ─── monorepo ──────────────────────────────────────────────────────────────────
+
+program
+  .command("monorepo")
+  .description("Validate .env files across all packages in a monorepo")
+  .option("-p, --packages <patterns>", "Comma-separated directory patterns to scan", "packages/*,apps/*")
+  .option("-s, --strict", "Exit with code 1 if any package fails")
+  .option("-f, --format <format>", "Output format: text or json", "text")
+  .action((options) => {
+    const isJson = options.format === "json";
+    const patterns: string[] = (options.packages as string).split(",").map((p: string) => p.trim());
+
+    // Expand each pattern (e.g. "packages/*") to all subdirectories of its parent
+    const pkgDirs: string[] = [];
+    for (const pattern of patterns) {
+      const parentDir = path.resolve(pattern.replace(/\/\*$/, "").replace(/\*$/, ""));
+      if (!fs.existsSync(parentDir)) continue;
+      const entries = fs.readdirSync(parentDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) pkgDirs.push(path.join(parentDir, entry.name));
+      }
+    }
+
+    if (pkgDirs.length === 0) {
+      console.log("No package directories found. Use --packages to specify patterns (e.g. packages/*,apps/*).");
+      return;
+    }
+
+    const results: Record<string, { skipped?: boolean; success: boolean; result?: DriftResult }> = {};
+    let passing = 0;
+    let failing = 0;
+    let skipped = 0;
+
+    for (const pkgDir of pkgDirs) {
+      const pkgName = path.relative(process.cwd(), pkgDir);
+      const config  = loadConfigFrom(pkgDir);
+      const basePath   = path.resolve(pkgDir, config.baseEnv ?? ".env.example");
+      const targetPath = path.resolve(pkgDir, ".env");
+
+      if (!fs.existsSync(basePath)) {
+        skipped++;
+        results[pkgName] = { skipped: true, success: true };
+        if (!isJson) console.log(`\n  ⏭  ${pkgName}  —  skipped (no ${config.baseEnv ?? ".env.example"})`);
+        continue;
+      }
+
+      const baseEnv   = parseEnv(basePath);
+      const targetEnv = fs.existsSync(targetPath) ? parseEnv(targetPath) : {};
+      const result    = checkDrift(baseEnv, targetEnv, config);
+
+      const success = !result.missing.length && !result.errors.length && !result.mismatches.length;
+      if (success) passing++; else failing++;
+      results[pkgName] = { success, result };
+
+      if (!isJson) {
+        console.log(`\n  ${success ? "✔" : "✖"} ${pkgName}`);
+        report(result);
+      }
+    }
+
+    if (isJson) {
+      console.log(JSON.stringify(results, null, 2));
+    } else {
+      console.log(`\n  ─────────────────────────────────`);
+      console.log(`  Packages scanned : ${pkgDirs.length}`);
+      console.log(`  Passing          : ${passing}`);
+      console.log(`  Failing          : ${failing}`);
+      if (skipped > 0) console.log(`  Skipped          : ${skipped}`);
+      console.log();
+      if (failing === 0) {
+        console.log("  ✔ All packages passed.");
+      } else {
+        console.log(`  ⚠️  ${failing} package(s) have issues.`);
+      }
+    }
+
+    if (options.strict && failing > 0) process.exit(1);
   });
 
 program.parse(process.argv);
