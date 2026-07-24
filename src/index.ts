@@ -7,5 +7,6 @@ export * from "./engine/envGenerator";
 export * from "./engine/codeScanner";
 export * from "./engine/frameworkChecker";
 export * from "./reporter/sarifReporter";
+export * from "./reporter/consoleReporter";
 export * from "./config/loadConfig";
 export * from "./types";

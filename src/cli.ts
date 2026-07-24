@@ -22,7 +22,7 @@ const program = new Command();
 program
   .name("env-drift-check")
   .description("Interactive .env synchronizer and validator")
-  .version("0.4.0");
+  .version("0.5.0");
 
 // ─── check helpers ────────────────────────────────────────────────────────────
 
@@ -489,6 +489,24 @@ program
 
 // ─── monorepo ──────────────────────────────────────────────────────────────────
 
+function expandPackagePatterns(patterns: string): string[] {
+  const dirs: string[] = [];
+  for (const pattern of patterns.split(",").map(p => p.trim())) {
+    if (pattern.endsWith("/*")) {
+      const parent = path.resolve(pattern.slice(0, -2));
+      if (fs.existsSync(parent)) {
+        fs.readdirSync(parent, { withFileTypes: true })
+          .filter(d => d.isDirectory())
+          .forEach(d => dirs.push(path.join(parent, d.name)));
+      }
+    } else {
+      const resolved = path.resolve(pattern);
+      if (fs.existsSync(resolved)) dirs.push(resolved);
+    }
+  }
+  return dirs;
+}
+
 program
   .command("monorepo")
   .description("Validate .env files across all packages in a monorepo")
@@ -496,71 +514,65 @@ program
   .option("-s, --strict", "Exit with code 1 if any package fails")
   .option("-f, --format <format>", "Output format: text or json", "text")
   .action((options) => {
+    const pkgDirs = expandPackagePatterns(options.packages);
     const isJson = options.format === "json";
-    const patterns: string[] = (options.packages as string).split(",").map((p: string) => p.trim());
-
-    // Expand each pattern (e.g. "packages/*") to all subdirectories of its parent
-    const pkgDirs: string[] = [];
-    for (const pattern of patterns) {
-      const parentDir = path.resolve(pattern.replace(/\/\*$/, "").replace(/\*$/, ""));
-      if (!fs.existsSync(parentDir)) continue;
-      const entries = fs.readdirSync(parentDir, { withFileTypes: true });
-      for (const entry of entries) {
-        if (entry.isDirectory()) pkgDirs.push(path.join(parentDir, entry.name));
-      }
-    }
 
     if (pkgDirs.length === 0) {
-      console.log("No package directories found. Use --packages to specify patterns (e.g. packages/*,apps/*).");
+      console.log("No package directories found matching the given patterns.");
       return;
     }
 
-    const results: Record<string, { skipped?: boolean; success: boolean; result?: DriftResult }> = {};
-    let passing = 0;
-    let failing = 0;
-    let skipped = 0;
+    if (!isJson) console.log(`\n Scanning ${pkgDirs.length} package(s)...\n`);
+
+    let passing = 0, failing = 0, skipped = 0;
+    const jsonResults: Record<string, unknown> = {};
 
     for (const pkgDir of pkgDirs) {
       const pkgName = path.relative(process.cwd(), pkgDir);
-      const config  = loadConfigFrom(pkgDir);
-      const basePath   = path.resolve(pkgDir, config.baseEnv ?? ".env.example");
+      const config = loadConfigFrom(pkgDir);
+      const basePath = path.resolve(pkgDir, config.baseEnv ?? ".env.example");
       const targetPath = path.resolve(pkgDir, ".env");
 
       if (!fs.existsSync(basePath)) {
         skipped++;
-        results[pkgName] = { skipped: true, success: true };
-        if (!isJson) console.log(`\n  ⏭  ${pkgName}  —  skipped (no ${config.baseEnv ?? ".env.example"})`);
+        if (!isJson) console.log(`  ⚪ ${pkgName}  (no .env.example — skipped)`);
+        else jsonResults[pkgName] = { status: "skipped" };
         continue;
       }
 
-      const baseEnv   = parseEnv(basePath);
+      const baseEnv = parseEnv(basePath);
       const targetEnv = fs.existsSync(targetPath) ? parseEnv(targetPath) : {};
-      const result    = checkDrift(baseEnv, targetEnv, config);
+      const result = checkDrift(baseEnv, targetEnv, config);
+      const ok = !result.missing.length && !result.errors.length;
 
-      const success = !result.missing.length && !result.errors.length && !result.mismatches.length;
-      if (success) passing++; else failing++;
-      results[pkgName] = { success, result };
-
-      if (!isJson) {
-        console.log(`\n  ${success ? "✔" : "✖"} ${pkgName}`);
-        report(result);
+      if (ok) {
+        passing++;
+        if (!isJson) console.log(`  ✔ ${pkgName}`);
+        else jsonResults[pkgName] = { status: "pass" };
+      } else {
+        failing++;
+        if (!isJson) {
+          console.log(`  ✖ ${pkgName}`);
+          if (result.missing.length) console.log(`       ✖ Missing: ${result.missing.join(", ")}`);
+          if (result.errors.length)  console.log(`       ✖ Errors:  ${result.errors.map(e => e.key).join(", ")}`);
+        } else {
+          jsonResults[pkgName] = { status: "fail", missing: result.missing, errors: result.errors };
+        }
       }
     }
 
     if (isJson) {
-      console.log(JSON.stringify(results, null, 2));
+      console.log(JSON.stringify(jsonResults, null, 2));
     } else {
-      console.log(`\n  ─────────────────────────────────`);
+      console.log(`\n  ${"─".repeat(33)}`);
       console.log(`  Packages scanned : ${pkgDirs.length}`);
       console.log(`  Passing          : ${passing}`);
-      console.log(`  Failing          : ${failing}`);
+      if (failing > 0) console.log(`  Failing          : ${failing}`);
       if (skipped > 0) console.log(`  Skipped          : ${skipped}`);
-      console.log();
-      if (failing === 0) {
-        console.log("  ✔ All packages passed.");
-      } else {
-        console.log(`  ⚠️  ${failing} package(s) have issues.`);
-      }
+      console.log(failing > 0
+        ? `\n  ⚠️  ${failing} package(s) have issues.`
+        : `\n  ✔ All packages passed.`
+      );
     }
 
     if (options.strict && failing > 0) process.exit(1);

@@ -6,13 +6,6 @@ export interface CodebaseScanResult {
   filesScanned: number;
 }
 
-/**
- * Scans JavaScript and TypeScript source files in the current workspace
- * to find environment variables referenced as process.env.KEY or process.env['KEY'].
- * 
- * @param baseDir - Directory to scan (e.g., process.cwd())
- * @returns Scan result containing array of unique environment keys found
- */
 export function scanCodebase(baseDir: string): CodebaseScanResult {
   const foundKeys = new Set<string>();
   let filesScanned = 0;

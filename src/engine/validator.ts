@@ -85,16 +85,6 @@ const TYPE_VALIDATORS: Record<string, (key: string, value: string, rule: Rule, e
   regex:   (key, value, rule)       => validateRegex(key, value, rule),
 };
 
-/**
- * Validates a single environment variable value against a set of rules.
- * Supports string length, number ranges, boolean flags, enums, emails, URLs, and custom regex.
- *
- * @param key - The name of the environment variable
- * @param value - The value to validate
- * @param rule - The validation rule configuration for this key
- * @param env - The current environment (e.g., NODE_ENV) for conditional rules
- * @returns A string containing the error message if validation fails, otherwise null
- */
 export function validateValue(
   key: string,
   value: string,

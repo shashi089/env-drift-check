@@ -13,13 +13,9 @@ interface ComposeFile {
 
 export interface ServiceValidationResult {
   service: string;
-  /** Keys explicitly set in the environment block */
   definedKeys: string[];
-  /** env_file entries referenced (resolved at runtime — not enumerated) */
   envFileRefs: string[];
-  /** Keys in the compose environment block that are not in the schema */
   unknownKeys: string[];
-  /** Required schema keys absent from this service's environment block */
   missingRequiredKeys: string[];
 }
 

@@ -2,15 +2,6 @@ import prompts from "prompts";
 import { Rule, Config } from "../types";
 import { validateValue } from "./validator";
 
-/**
- * Launches an interactive CLI wizard to help users fill in missing environment variables.
- * Uses the 'prompts' package to collect user input with validation.
- * 
- * @param missingKeys - An array of environment variable keys that are missing
- * @param baseEnv - The template environment mapping
- * @param config - The tool configuration containing validation rules
- * @returns A promise that resolves to a record of the newly filled key-value pairs
- */
 export async function interactiveSetup(
     missingKeys: string[],
     baseEnv: Record<string, string>,
@@ -25,16 +16,16 @@ export async function interactiveSetup(
         const rule: Rule = config.rules?.[key] || { type: "string" };
         const initial = baseEnv[key] || "";
 
-        // Determine prompt type
         let promptType: prompts.PromptType = "text";
         if (rule.type === "boolean") promptType = "confirm";
         if (rule.type === "number") promptType = "number";
         if (key.includes("PASSWORD") || key.includes("SECRET")) promptType = "password";
 
+        const label = rule.description ? `${key} (${rule.description}):` : `${key}:`;
         const response = await prompts({
             type: promptType,
             name: "value",
-            message: `${key}${rule.description ? ` (${rule.description})` : ""}:`,
+            message: label,
             initial: promptType === "confirm" ? initial === "true" : initial,
             validate: (val) => {
                 const strVal = String(val);
@@ -43,7 +34,6 @@ export async function interactiveSetup(
             }
         });
 
-        // Handle user cancellation (Ctrl+C)
         if (response.value === undefined) {
             console.log("\nSetup cancelled.");
             process.exit(1);

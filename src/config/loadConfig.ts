@@ -48,11 +48,9 @@ function resolveExtends(config: Config, configDir: string, visited: Set<string>)
     parent = parseJsonConfig(parentPath);
   }
 
-  // Recursively resolve parent's own extends
   parent = resolveExtends(parent, path.dirname(parentPath), visited);
 
   const { extends: _, ...child } = config;
-
   return {
     ...parent,
     ...child,
@@ -60,22 +58,12 @@ function resolveExtends(config: Config, configDir: string, visited: Set<string>)
   };
 }
 
-/**
- * Loads configuration from a specific directory.
- * Supports "extends" for config inheritance — child rules override parent rules.
- * JSON takes priority over JS. Falls back to defaults if neither file exists.
- */
 export function loadConfigFrom(dir: string): Config {
   const jsonPath = path.resolve(dir, "envwise.config.json");
   const jsPath   = path.resolve(dir, "envwise.config.js");
 
   if (fs.existsSync(jsonPath)) {
-    let userConfig: Config;
-    try {
-      userConfig = parseJsonConfig(jsonPath);
-    } catch {
-      process.exit(1);
-    }
+    let userConfig = parseJsonConfig(jsonPath);
     userConfig = resolveExtends(userConfig, path.dirname(jsonPath), new Set([jsonPath]));
     return { ...DEFAULT_CONFIG, ...userConfig, rules: { ...DEFAULT_CONFIG.rules, ...userConfig.rules } };
   }
@@ -97,13 +85,6 @@ export function loadConfigFrom(dir: string): Config {
   return DEFAULT_CONFIG;
 }
 
-/**
- * Loads project configuration from the current working directory.
- * Supports "extends" for config inheritance — child rules override parent rules.
- * JSON takes priority. Falls back to defaults if neither file exists.
- *
- * @returns The consolidated configuration object
- */
 export function loadConfig(): Config {
   return loadConfigFrom(process.cwd());
 }

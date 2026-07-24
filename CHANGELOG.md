@@ -14,16 +14,16 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 
 ### Added
 
-- **Kubernetes ConfigMap generator** — `gen-configmap` command splits a `.env` file into a `ConfigMap` YAML (safe keys) and a `Secret` YAML (sensitive keys detected by name pattern). Outputs two files ready to apply with `kubectl`.
-- **Docker Compose env validation** — `validate-compose` command parses a `docker-compose.yml` file, extracts all `environment:` blocks, and validates them against the active schema. Reports missing keys and type errors per service.
-- **GitHub Actions marketplace action** — `action.yml` in the repo root enables `uses: shashi089/env-drift-check@v1` in any workflow. Composite action with inputs for `command`, `file`, `base`, `strict`, `format`, `system-env`, and `all`. Automatically installs and runs the CLI via `npx`.
-- **Config inheritance (`extends`)** — `envwise.config.json` now supports an `"extends"` field pointing to a parent config file. Rules are deep-merged; child rules override parent rules on conflict. Circular reference detection exits with a clear error. Supports both `.json` and `.js` parent configs.
-- **Monorepo support** — `monorepo` command expands glob patterns like `packages/*,apps/*`, loads per-package `envwise.config.json` if present (falling back to the root config), runs drift checks for each package, and prints a per-package pass/fail summary. `--strict` exits with code 1 if any package fails. `--format json` emits a machine-readable aggregate report.
-- **`loadConfigFrom(dir)`** — New programmatic export that loads config from an arbitrary directory instead of `process.cwd()`. Used internally by the monorepo command; available for library consumers.
+- **Kubernetes ConfigMap generator** — `gen-configmap` command splits a `.env` into a `ConfigMap` YAML (safe keys) and a `Secret` YAML (sensitive keys). Ready to apply with `kubectl apply -f`.
+- **Docker Compose env validation** — `validate-compose` command parses a `docker-compose.yml`, extracts all `environment:` blocks, and validates them against the active schema per service.
+- **GitHub Actions marketplace action** — `action.yml` in the repo root enables `uses: shashi089/env-drift-check@v1`. Composite action with inputs for `command`, `file`, `base`, `strict`, `format`, `system-env`, and `all`.
+- **Config inheritance (`extends`)** — `envwise.config.json` now supports an `"extends"` field pointing to a parent config. Rules are deep-merged; child rules override parent on conflict. Circular references are detected and exit with a clear error.
+- **Monorepo support** — `monorepo` command expands glob patterns like `packages/*,apps/*`, loads per-package `envwise.config.json` if present, runs drift checks per package, and prints an aggregate pass/fail summary. `--strict` exits with code 1 if any package fails.
+- **`loadConfigFrom(dir)`** — New export that loads config from an arbitrary directory. Used by the monorepo command; available for library consumers.
 
 ### Fixed
 
-- **`scan --fix` with no base file** — Previously `--fix` silently did nothing when `.env.example` didn't exist. Now creates the file from scratch, seeding it with all discovered keys set to empty values and a generated header comment.
+- **`scan --fix` with no base file** — Previously did nothing when `.env.example` didn't exist. Now creates the file from scratch with all discovered keys set to empty values.
 
 ---
 

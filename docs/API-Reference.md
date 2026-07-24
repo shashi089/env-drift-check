@@ -1,12 +1,6 @@
 # API Reference
 
-`env-drift-check` exports functions for programmatic use in Node.js applications. This enables fail-fast startup validation, CI integrations, and custom tooling.
-
-## Installation
-
-```bash
-npm install env-drift-check
-```
+`env-drift-check` exports functions for programmatic use in Node.js applications.
 
 ## Usage
 
@@ -22,45 +16,27 @@ import { checkDrift, loadConfig, parseEnv, report } from 'env-drift-check';
 
 ### `loadConfig()`
 
-Loads configuration from `envwise.config.json` or `envwise.config.js` in the current working directory. Resolves `extends` inheritance chains and merges with defaults.
+Loads `envwise.config.json` or `envwise.config.js` from the current working directory. Resolves `extends` chains and merges with defaults. Synchronous.
 
 ```typescript
 function loadConfig(): Config
 ```
 
-**Returns:** `Config` — the merged configuration object.
-
----
-
 ### `loadConfigFrom(dir)`
 
-Same as `loadConfig()` but reads config from a specific directory. Used by the monorepo command to load per-package configs.
+Same as `loadConfig()` but reads config from a specific directory. Used by the monorepo command for per-package configs.
 
 ```typescript
 function loadConfigFrom(dir: string): Config
 ```
 
-- **`dir`** — Absolute path to the directory containing `envwise.config.json` / `envwise.config.js`.
-
-**Returns:** `Config`.
-
----
-
 ### `parseEnv(filePath)`
 
-Parses a `.env` file from disk into a key-value map.
+Parses a `.env` file from disk into a key-value map. Throws if the file does not exist.
 
 ```typescript
 function parseEnv(filePath: string): Record<string, string>
 ```
-
-- **`filePath`** — Absolute path to the `.env` file.
-
-**Returns:** `Record<string, string>` — parsed key-value pairs.
-
-**Throws** if the file does not exist.
-
----
 
 ### `checkDrift(base, target, config)`
 
@@ -74,14 +50,6 @@ function checkDrift(
 ): DriftResult
 ```
 
-- **`base`** — Template key-value map (e.g., from `.env.example`).
-- **`target`** — Actual environment key-value map (e.g., from `.env`).
-- **`config`** — Configuration object from `loadConfig()`.
-
-**Returns:** `DriftResult`.
-
----
-
 ### `report(result)`
 
 Prints a formatted drift report to the console.
@@ -89,8 +57,6 @@ Prints a formatted drift report to the console.
 ```typescript
 function report(result: DriftResult): void
 ```
-
-- **`result`** — `DriftResult` from `checkDrift()`.
 
 ---
 
@@ -138,19 +104,11 @@ interface DriftResult {
   warnings: string[];
   mismatches: ValueMismatch[];
 }
-
-interface ValueMismatch {
-  key: string;
-  expected: string;
-  actual: string;
-}
 ```
 
 ---
 
 ## Example: Fail-Fast Bootstrap
-
-Validate the environment before any application logic runs:
 
 ```javascript
 const { checkDrift, parseEnv, loadConfig, report } = require('env-drift-check');
@@ -169,7 +127,6 @@ function bootstrap() {
   }
 
   const result = checkDrift(base, target, config);
-
   if (result.missing.length || result.errors.length) {
     report(result);
     process.exit(1);
@@ -181,20 +138,4 @@ module.exports = bootstrap;
 
 ---
 
-## Example: Monorepo Per-Package Validation
-
-```javascript
-const { loadConfigFrom, parseEnv, checkDrift } = require('env-drift-check');
-const path = require('path');
-
-function validatePackage(pkgDir) {
-  const config = loadConfigFrom(pkgDir);
-  const base = parseEnv(path.join(pkgDir, config.baseEnv || '.env.example'));
-  const target = parseEnv(path.join(pkgDir, '.env'));
-  return checkDrift(base, target, config);
-}
-```
-
----
-
-See [src/types.ts](../src/types.ts) for the authoritative TypeScript source of all interfaces.
+See [src/types.ts](../src/types.ts) for the authoritative TypeScript source.
