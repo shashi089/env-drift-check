@@ -1,0 +1,52 @@
+name: env-drift-check
+description: Validate .env files, detect drift, and audit git safety in CI/CD pipelines.
+author: Shashidhar Naik
+
+inputs:
+  command:
+    description: "Command to run: check, scan, audit, diff, gen-example, gen-configmap, validate-compose, monorepo"
+    required: false
+    default: check
+  file:
+    description: Target .env file path
+    required: false
+    default: .env
+  base:
+    description: Base .env.example file path
+    required: false
+    default: .env.example
+  strict:
+    description: Exit with code 1 on any issue
+    required: false
+    default: "false"
+  format:
+    description: "Output format: text, json, or sarif"
+    required: false
+    default: text
+  system-env:
+    description: Fall back to process.env as the validation target
+    required: false
+    default: "false"
+  all:
+    description: Check all .env* files in the directory
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Run env-drift-check
+      shell: bash
+      run: |
+        ARGS="${{ inputs.command }}"
+        [ "${{ inputs.strict }}" = "true" ] && ARGS="$ARGS --strict"
+        [ "${{ inputs.system-env }}" = "true" ] && ARGS="$ARGS --system-env"
+        [ "${{ inputs.all }}" = "true" ] && ARGS="$ARGS --all"
+        [ "${{ inputs.format }}" != "text" ] && ARGS="$ARGS --format ${{ inputs.format }}"
+        [ -n "${{ inputs.file }}" ] && [ "${{ inputs.file }}" != ".env" ] && ARGS="$ARGS --target ${{ inputs.file }}"
+        [ -n "${{ inputs.base }}" ] && [ "${{ inputs.base }}" != ".env.example" ] && ARGS="$ARGS --base ${{ inputs.base }}"
+        npx env-drift-check $ARGS
+
+branding:
+  icon: shield
+  color: green

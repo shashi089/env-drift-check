@@ -1,12 +1,5 @@
 import fs from "fs";
 
-/**
- * Updates an existing .env file with new values while preserving 
- * comments, empty lines, and original formatting.
- * 
- * @param filePath - Path to the .env file
- * @param newValues - Record of key-value pairs to update or add
- */
 export function updateEnvFile(filePath: string, newValues: Record<string, string>): void {
   const rawContent = fs.readFileSync(filePath, "utf-8");
   const lines = rawContent.split(/\r?\n/);
@@ -27,8 +20,6 @@ export function updateEnvFile(filePath: string, newValues: Record<string, string
       const key = line.slice(0, firstEq).trim();
       if (key in keysToUpdate) {
         const prefix = line.slice(0, firstEq + 1);
-
-        // Logic to preserve trailing comments
         const rawValue = line.slice(firstEq + 1);
         let suffix = "";
         let inQuote = false;
@@ -57,9 +48,7 @@ export function updateEnvFile(filePath: string, newValues: Record<string, string
     updatedLines.push(line);
   }
 
-  // Add remaining new keys to the end of the file
   if (Object.keys(keysToUpdate).length > 0) {
-    // Add a newline if the file doesn't end with one
     if (updatedLines.length > 0 && updatedLines[updatedLines.length - 1].trim() !== "") {
         updatedLines.push("");
     }

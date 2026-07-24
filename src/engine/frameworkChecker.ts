@@ -4,9 +4,7 @@ import path from "path";
 type Framework = "nextjs" | "vite" | "cra" | "none";
 
 interface FrameworkRule {
-  /** Prefix that marks a variable as publicly exposed to the browser. */
   publicPrefix: string;
-  /** Display name for warning messages. */
   name: string;
 }
 
@@ -30,8 +28,8 @@ export function detectFramework(cwd: string): Framework {
   }
 
   const deps = {
-    ...((pkg.dependencies as Record<string, string>) ?? {}),
-    ...((pkg.devDependencies as Record<string, string>) ?? {}),
+    ...(pkg.dependencies as Record<string, string>),
+    ...(pkg.devDependencies as Record<string, string>),
   };
 
   if ("next" in deps) return "nextjs";

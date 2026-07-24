@@ -1,37 +1,141 @@
 # API Reference
 
-`env-drift-check` exports several functions for programmatic use in Node.js applications.
+`env-drift-check` exports functions for programmatic use in Node.js applications.
 
 ## Usage
 
 ```javascript
-const { checkDrift, loadConfig, parseEnv } = require('env-drift-check');
+const { checkDrift, loadConfig, parseEnv, report } = require('env-drift-check');
 // or
-import { checkDrift, loadConfig, parseEnv } from 'env-drift-check';
+import { checkDrift, loadConfig, parseEnv, report } from 'env-drift-check';
 ```
+
+---
 
 ## Functions
 
+### `loadConfig()`
+
+Loads `envwise.config.json` or `envwise.config.js` from the current working directory. Resolves `extends` chains and merges with defaults. Synchronous.
+
+```typescript
+function loadConfig(): Config
+```
+
+### `loadConfigFrom(dir)`
+
+Same as `loadConfig()` but reads config from a specific directory. Used by the monorepo command for per-package configs.
+
+```typescript
+function loadConfigFrom(dir: string): Config
+```
+
+### `parseEnv(filePath)`
+
+Parses a `.env` file from disk into a key-value map. Throws if the file does not exist.
+
+```typescript
+function parseEnv(filePath: string): Record<string, string>
+```
+
 ### `checkDrift(base, target, config)`
-Compares two environment sets and applies validation rules.
-- **base**: `Record<string, string>` - The template (e.g., from `.env.example`).
-- **target**: `Record<string, string>` - The actual environment (e.g., from `.env`).
-- **config**: `Config` - The configuration object.
 
-**Returns:** `DriftResult` object containing `missing`, `extra`, `errors`, `warnings`, and `mismatches`.
+Compares two environment sets and applies all schema validation rules.
 
-### `loadConfig(configPath?)`
-Loads configuration from `envwise.config.json` or a custom path.
-- **configPath**: `string` (optional) - Custom path to config file.
+```typescript
+function checkDrift(
+  base: Record<string, string>,
+  target: Record<string, string>,
+  config: Config
+): DriftResult
+```
 
-**Returns:** `Promise<Config>`.
+### `report(result)`
 
-### `parseEnv(content)`
-Parses a string content of a `.env` file into a key-value object.
-- **content**: `string` - Raw `.env` file content.
+Prints a formatted drift report to the console.
 
-**Returns:** `Record<string, string>`.
+```typescript
+function report(result: DriftResult): void
+```
+
+---
 
 ## Types
 
-Refer to [src/types.ts](file:///d:/Personal/env-drift-check/src/types.ts) for detailed TypeScript interfaces.
+### `Config`
+
+```typescript
+interface Config {
+  baseEnv?: string;
+  rules?: Record<string, Rule>;
+  includeSystemEnv?: boolean;
+  framework?: "nextjs" | "vite" | "cra" | "auto" | "none";
+  extends?: string;
+}
+```
+
+### `Rule`
+
+```typescript
+interface Rule {
+  type: "string" | "number" | "boolean" | "enum" | "email" | "url" | "regex";
+  values?: string[];
+  regex?: string;
+  min?: number;
+  max?: number;
+  description?: string;
+  required?: boolean;
+  requiredIf?: Record<string, string>;
+  default?: string;
+  mustBeFalseIn?: string;
+  mustBeTrueIn?: string;
+  checkSecretStrength?: boolean;
+  deprecated?: boolean | string;
+}
+```
+
+### `DriftResult`
+
+```typescript
+interface DriftResult {
+  missing: string[];
+  extra: string[];
+  errors: { key: string; message: string }[];
+  warnings: string[];
+  mismatches: ValueMismatch[];
+}
+```
+
+---
+
+## Example: Fail-Fast Bootstrap
+
+```javascript
+const { checkDrift, parseEnv, loadConfig, report } = require('env-drift-check');
+const path = require('path');
+
+function bootstrap() {
+  const config = loadConfig();
+  const base = parseEnv(path.resolve(__dirname, '../.env.example'));
+
+  let target;
+  try {
+    target = parseEnv(path.resolve(__dirname, '../.env'));
+  } catch {
+    console.error('❌ .env file is missing. Run: npx env-drift-check -i');
+    process.exit(1);
+  }
+
+  const result = checkDrift(base, target, config);
+  if (result.missing.length || result.errors.length) {
+    report(result);
+    process.exit(1);
+  }
+}
+
+module.exports = bootstrap;
+```
+
+---
+
+See [src/types.ts](../src/types.ts) for the authoritative TypeScript source.

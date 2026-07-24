@@ -10,6 +10,23 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 
 ---
 
+## [0.5.0] — 2026-07-15
+
+### Added
+
+- **Kubernetes ConfigMap generator** — `gen-configmap` command splits a `.env` into a `ConfigMap` YAML (safe keys) and a `Secret` YAML (sensitive keys). Ready to apply with `kubectl apply -f`.
+- **Docker Compose env validation** — `validate-compose` command parses a `docker-compose.yml`, extracts all `environment:` blocks, and validates them against the active schema per service.
+- **GitHub Actions marketplace action** — `action.yml` in the repo root enables `uses: shashi089/env-drift-check@v1`. Composite action with inputs for `command`, `file`, `base`, `strict`, `format`, `system-env`, and `all`.
+- **Config inheritance (`extends`)** — `envwise.config.json` now supports an `"extends"` field pointing to a parent config. Rules are deep-merged; child rules override parent on conflict. Circular references are detected and exit with a clear error.
+- **Monorepo support** — `monorepo` command expands glob patterns like `packages/*,apps/*`, loads per-package `envwise.config.json` if present, runs drift checks per package, and prints an aggregate pass/fail summary. `--strict` exits with code 1 if any package fails.
+- **`loadConfigFrom(dir)`** — New export that loads config from an arbitrary directory. Used by the monorepo command; available for library consumers.
+
+### Fixed
+
+- **`scan --fix` with no base file** — Previously did nothing when `.env.example` didn't exist. Now creates the file from scratch with all discovered keys set to empty values.
+
+---
+
 ## [0.4.0] — 2026-06-30
 
 ### Added
@@ -124,7 +141,8 @@ This project follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) an
 
 ---
 
-[Unreleased]: https://github.com/shashi089/env-drift-check/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/shashi089/env-drift-check/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/shashi089/env-drift-check/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/shashi089/env-drift-check/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/shashi089/env-drift-check/compare/v0.2.3...v0.3.0
 [0.2.3]: https://github.com/shashi089/env-drift-check/compare/v0.2.1...v0.2.3

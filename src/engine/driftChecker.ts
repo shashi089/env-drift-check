@@ -2,9 +2,6 @@ import { DriftResult, Config } from "../types";
 import { validateValue } from "./validator";
 import { detectFramework, getFrameworkWarnings } from "./frameworkChecker";
 
-/**
- * Resolves the effective value for a key: target file → system env → rule default.
- */
 function resolveValue(
   key: string,
   target: Record<string, string>,
@@ -15,9 +12,6 @@ function resolveValue(
   return undefined;
 }
 
-/**
- * Returns true when a requiredIf condition is satisfied, meaning the key IS required.
- */
 function isConditionMet(
   requiredIf: Record<string, string>,
   target: Record<string, string>,
@@ -29,15 +23,6 @@ function isConditionMet(
   });
 }
 
-/**
- * Compares a base environment (template) against a target environment (actual)
- * and returns the differences including missing keys, extra keys, and value mismatches.
- *
- * @param base - The record representing the template environment (e.g., .env.example)
- * @param target - The record representing the actual environment (e.g., .env)
- * @param config - Configuration object containing validation rules
- * @returns An object containing the results of the drift check
- */
 export function checkDrift(
   base: Record<string, string>,
   target: Record<string, string>,
